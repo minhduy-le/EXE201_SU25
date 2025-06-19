@@ -308,64 +308,47 @@ const OrderPage = () => {
                         style={{ flexDirection: "row", alignSelf: "flex-end" }}
                       >
                         <View style={styles.container}>
-                          {item.status === "Đã giao" ? (
-                            <>
-                              <TouchableOpacity
-                                style={styles.button}
-                                onPress={() => handleViewDetails(item.orderId)}
-                              >
-                                <Text style={styles.buttonText}>
-                                  Xem chi tiết
-                                </Text>
-                              </TouchableOpacity>
-                              <TouchableOpacity
+                          <TouchableOpacity
+                            style={styles.button}
+                            onPress={() => handleViewDetails(item.orderId)}
+                          >
+                            <Text style={styles.buttonText}>Xem chi tiết</Text>
+                          </TouchableOpacity>
+                          {["Paid", "Pending"].includes(item.status) && (
+                            <TouchableOpacity
+                              style={[
+                                styles.button,
+                                { backgroundColor: APP_COLOR.ORANGE },
+                              ]}
+                              onPress={() => handleCancelOrder(item.orderId)}
+                            >
+                              <Text
                                 style={[
-                                  styles.button,
-                                  { backgroundColor: APP_COLOR.ORANGE },
+                                  styles.buttonText,
+                                  { color: APP_COLOR.WHITE },
                                 ]}
-                                onPress={() => handleFeedback(item.orderId)}
                               >
-                                <Text
-                                  style={[
-                                    styles.buttonText,
-                                    { color: APP_COLOR.WHITE },
-                                  ]}
-                                >
-                                  Đánh giá
-                                </Text>
-                              </TouchableOpacity>
-                            </>
-                          ) : (
-                            <>
-                              <TouchableOpacity
-                                style={styles.button}
-                                onPress={() => handleViewDetails(item.orderId)}
+                                Hủy
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                          {item.status === "Delivered" && (
+                            <TouchableOpacity
+                              style={[
+                                styles.button,
+                                { backgroundColor: APP_COLOR.ORANGE },
+                              ]}
+                              onPress={() => handleFeedback(item.orderId)}
+                            >
+                              <Text
+                                style={[
+                                  styles.buttonText,
+                                  { color: APP_COLOR.WHITE },
+                                ]}
                               >
-                                <Text style={styles.buttonText}>
-                                  Xem chi tiết
-                                </Text>
-                              </TouchableOpacity>
-                              {item.status !== "Đã hủy" && (
-                                <TouchableOpacity
-                                  style={[
-                                    styles.button,
-                                    { backgroundColor: APP_COLOR.ORANGE },
-                                  ]}
-                                  onPress={() =>
-                                    handleCancelOrder(item.orderId)
-                                  }
-                                >
-                                  <Text
-                                    style={[
-                                      styles.buttonText,
-                                      { color: APP_COLOR.WHITE },
-                                    ]}
-                                  >
-                                    Hủy
-                                  </Text>
-                                </TouchableOpacity>
-                              )}
-                            </>
+                                Nhận xét
+                              </Text>
+                            </TouchableOpacity>
                           )}
                         </View>
                       </View>
