@@ -1,21 +1,31 @@
-import { FONTS } from "@/theme/typography";
-import { APP_COLOR } from "@/utils/constant";
-import { Text, View } from "react-native";
+import { StyleSheet, View } from "react-native";
+import { WebView } from "react-native-webview";
+const chatbotUrl = "https://udify.app/chatbot/84XresgPoO8dLdgJ";
 
 const AIPage = () => {
   return (
-    <View
-      style={{
-        flex: 1,
-        justifyContent: "center",
-        alignItems: "center",
-        backgroundColor: APP_COLOR.BACKGROUND_ORANGE,
-      }}
-    >
-      <Text style={{ color: APP_COLOR.BROWN, fontFamily: FONTS.regular }}>
-        Vui lòng đăng nhập để xem tính năng này.
-      </Text>
+    <View style={styles.container}>
+      <WebView
+        source={{ uri: chatbotUrl }}
+        style={styles.webview}
+        javaScriptEnabled={true}
+        domStorageEnabled={true}
+        allowsInlineMediaPlayback={true}
+        mediaPlaybackRequiresUserAction={false}
+      />
     </View>
   );
 };
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    position: "relative",
+    bottom: -30,
+  },
+  webview: {
+    flex: 1,
+  },
+});
+
 export default AIPage;

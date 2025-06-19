@@ -23,11 +23,6 @@ import { FONTS, typography } from "@/theme/typography";
 import logo from "@/assets/logo.png";
 import ShareButton from "@/components/button/share.button";
 import icon from "@/assets/icons/loi-chuc.png";
-const sampleData = {
-  name: "Lê Minh Duy",
-  phone: "0889679561",
-  address: "TP Thủ Đức, TP Hồ Chí Minh",
-};
 
 const getCurrentDateTime = (): string => {
   const now = new Date();
