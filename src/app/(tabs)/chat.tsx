@@ -138,7 +138,7 @@ const ChatList = () => {
         />
       </View> */}
       <Text style={{ color: APP_COLOR.BROWN, fontFamily: FONTS.regular }}>
-        Vui lòng đăng nhập để xem lịch sử đơn hàng.
+        Vui lòng đăng nhập để sử dụng tính năng này.
       </Text>
     </View>
   );
