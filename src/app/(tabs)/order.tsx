@@ -363,7 +363,7 @@ const OrderPage = () => {
             <View
               style={{
                 position: "absolute",
-                bottom: 10,
+                bottom: 0,
                 right: 20,
                 backgroundColor: APP_COLOR.BROWN,
                 borderRadius: 50,
