@@ -259,7 +259,7 @@ const AccountPage = () => {
             />
           </Pressable>
           <Pressable
-            onPress={() => router.navigate("/(user)/account/password")}
+            onPress={() => router.navigate("/(auth)/voucher")}
             style={{
               paddingVertical: 15,
               paddingHorizontal: 10,

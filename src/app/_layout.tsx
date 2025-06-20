@@ -120,6 +120,10 @@ const RootLayout = () => {
                   options={{ headerShown: false }}
                 />
                 <Stack.Screen
+                  name="(auth)/voucher"
+                  options={{ headerShown: false }}
+                />
+                <Stack.Screen
                   name="(auth)/customer.signup"
                   options={{ headerShown: false }}
                 ></Stack.Screen>

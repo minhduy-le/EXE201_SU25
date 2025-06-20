@@ -92,10 +92,10 @@ const HeaderHome: React.FC<HeaderHomeProps> = ({ onBranchSelect }) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
-        const res = await axios.get(
-          `${BASE_URL}/branches/distance?destination=${locationReal}`
-        );
-        setBranchInfo(res.data.data);
+        // const res = await axios.get(
+        //   `${BASE_URL}/branches/distance?destination=${locationReal}`
+        // );
+        // setBranchInfo(res.data.data);
       } catch (error) {
         console.error("Error fetching data:", error);
       }
