@@ -10,7 +10,12 @@ interface IVoucher {
 const VoucherComponent = (props: IVoucher) => {
   return (
     <View
-      style={{ flexDirection: "row", marginHorizontal: 10, marginVertical: 7 }}
+      style={{
+        flexDirection: "row",
+        marginHorizontal: 10,
+        marginVertical: 7,
+        borderStyle: "dashed",
+      }}
     >
       <View
         style={{
@@ -18,6 +23,8 @@ const VoucherComponent = (props: IVoucher) => {
           paddingVertical: 10,
           flex: 0.7,
           borderRadius: 7,
+          borderLeftColor: APP_COLOR.BROWN,
+          borderLeftWidth: 3,
         }}
       >
         <View

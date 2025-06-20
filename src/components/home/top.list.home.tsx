@@ -40,7 +40,7 @@ const icon = [
     key: 5,
     name: "Thông tin",
     source: require("@/assets/icons/thong-tin.png"),
-    targetScreen: "information",
+    targetScreen: "account",
   },
 ];
 const IconItem = ({ item }: any) => {
