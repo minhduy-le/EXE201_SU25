@@ -1,14 +1,28 @@
 import VoucherComponent from "@/components/account/user.voucher";
 import { FONTS } from "@/theme/typography";
 import { APP_COLOR } from "@/utils/constant";
-import { de } from "@faker-js/faker";
 import { FlatList, StyleSheet, Text, View } from "react-native";
 
 const Voucher = () => {
   const sampleData = [
-    { id: 1, code: "SUMMER25", description: "Giảm giá 25%" },
-    { id: 2, code: "WINTER15", description: "Giảm giá 15%" },
-    { id: 3, code: "SPRING10", description: "Giảm giá 10%" },
+    {
+      id: 1,
+      code: "SUMMER25",
+      description: "Giảm giá 25%",
+      date: "01/06/2023",
+    },
+    {
+      id: 2,
+      code: "WINTER15",
+      description: "Giảm giá 15%",
+      date: "05/06/2023",
+    },
+    {
+      id: 3,
+      code: "SPRING10",
+      description: "Giảm giá 10%",
+      date: "10/06/2023",
+    },
   ];
   return (
     <View style={styles.container}>
@@ -16,7 +30,11 @@ const Voucher = () => {
       <FlatList
         data={sampleData}
         renderItem={({ item }) => (
-          <VoucherComponent code={item.code} description={item.description} />
+          <VoucherComponent
+            code={item.code}
+            description={item.description}
+            date={item.date}
+          />
         )}
         keyExtractor={(item) => item.id.toString()}
       />

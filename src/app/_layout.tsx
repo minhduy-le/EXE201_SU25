@@ -173,6 +173,12 @@ const RootLayout = () => {
                   }}
                 />
                 <Stack.Screen
+                  name="(user)/voucher/[id]"
+                  options={{
+                    headerShown: false,
+                  }}
+                />
+                <Stack.Screen
                   name="(user)/product/place.order"
                   options={{ headerShown: false }}
                 />

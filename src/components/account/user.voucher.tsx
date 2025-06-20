@@ -1,14 +1,16 @@
 import { FONTS } from "@/theme/typography";
 import { APP_COLOR } from "@/utils/constant";
+import { router } from "expo-router";
 import { Pressable, Text, View } from "react-native";
 interface IVoucher {
   code: string;
   description: string;
+  date: string;
 }
 const VoucherComponent = (props: IVoucher) => {
   return (
     <View
-      style={{ flexDirection: "row", marginHorizontal: 10, marginVertical: 5 }}
+      style={{ flexDirection: "row", marginHorizontal: 10, marginVertical: 7 }}
     >
       <View
         style={{
@@ -18,15 +20,32 @@ const VoucherComponent = (props: IVoucher) => {
           borderRadius: 7,
         }}
       >
-        <Text
+        <View
           style={{
-            color: APP_COLOR.BROWN,
-            fontFamily: FONTS.bold,
-            marginLeft: 10,
+            flexDirection: "row",
+            alignItems: "center",
+            justifyContent: "space-between",
+            marginHorizontal: 10,
           }}
         >
-          {props.code}
-        </Text>
+          <Text
+            style={{
+              color: APP_COLOR.BROWN,
+              fontFamily: FONTS.bold,
+            }}
+          >
+            {props.code}
+          </Text>
+          <Text
+            style={{
+              fontFamily: FONTS.regular,
+              fontSize: 11,
+              color: APP_COLOR.BROWN,
+            }}
+          >
+            HSD: <Text style={{ fontFamily: FONTS.bold }}>{props.date}</Text>
+          </Text>
+        </View>
         <Text
           style={{
             color: APP_COLOR.BROWN,
@@ -48,12 +67,19 @@ const VoucherComponent = (props: IVoucher) => {
         style={{
           backgroundColor: APP_COLOR.WHITE,
           flex: 0.3,
-          borderRadius: 7,
+          borderRadius: 10,
           alignItems: "center",
           justifyContent: "center",
         }}
       >
-        <Pressable onPress={() => console.log("Voucher Details")}>
+        <Pressable
+          onPress={() =>
+            router.push({
+              pathname: "/(user)/voucher/[id]",
+              params: { id: props.code },
+            })
+          }
+        >
           <Text
             style={{
               textDecorationLine: "underline",
