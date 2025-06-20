@@ -79,7 +79,6 @@ const OrderPage = () => {
       }
     } catch (error) {
       setError("Không thể tải lịch sử đơn hàng");
-      console.error("Error:", error);
     } finally {
       setIsLoading(false);
     }
