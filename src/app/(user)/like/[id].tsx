@@ -201,7 +201,9 @@ const Like = () => {
                 <View style={{ alignItems: "flex-end" }}>
                   <Text style={styles.productDetails}>
                     {item.quantity} X{" "}
-                    {currencyFormatter(item.price * item.quantity)}
+                    <Text style={{ fontFamily: FONTS.bold }}>
+                      {currencyFormatter(item.price * item.quantity)}
+                    </Text>
                   </Text>
 
                   {renderStars(

@@ -46,7 +46,7 @@ const icon = [
     key: 6,
     name: "Phản hồi",
     source: require("@/assets/icons/danh-gia.png"),
-    targetScreen: "account",
+    targetScreen: "feedback",
   },
 ];
 const IconItem = ({ item }: any) => {

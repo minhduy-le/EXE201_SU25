@@ -21,12 +21,15 @@ import { FONTS } from "@/theme/typography";
 import axios from "axios";
 
 const { height: sHeight, width: sWidth } = Dimensions.get("window");
+
 interface IProps {
   name: string;
   id: number;
   branchId: number | null;
 }
+
 interface IPropsProduct {
+  name: string;
   productId: string;
   image: string;
   description: string;
@@ -51,7 +54,7 @@ export const useModal = () => {
 export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<IPropsProduct | null>(null);
-
+  const [typeProducts, setTypeProducts] = useState([]);
   const showProductModal = (item: IPropsProduct) => {
     setSelectedItem(item);
     setModalVisible(true);
@@ -61,7 +64,17 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
     setModalVisible(false);
     setSelectedItem(null);
   };
-
+  useEffect(() => {
+    const fetchTypeProducts = async () => {
+      try {
+        const typePro = await axios.get(`${API_URL}/api/products/type/3`);
+        setTypeProducts(typePro.data.products);
+      } catch (error) {
+        console.error("Error fetching product types:", error);
+      }
+    };
+    fetchTypeProducts();
+  }, []);
   return (
     <ModalContext.Provider value={{ showProductModal, hideProductModal }}>
       {children}
@@ -84,14 +97,20 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
               style={styles.modalImage}
               resizeMode="cover"
             />
-            <View style={styles.modalTextContainer}>
-              <Text style={styles.modalProductName}>
-                {selectedItem?.description}
-              </Text>
+            <Text style={styles.modalProductName}>
+              {selectedItem?.description}{" "}
               <Text style={styles.modalProductPrice}>
+                {" "}
                 {currencyFormatter(selectedItem?.price || 0)}
               </Text>
-            </View>
+            </Text>
+            {typeProducts.map((item: IPropsProduct) => (
+              <View>
+                <Text style={[styles.itemName, { maxWidth: 300 }]}>
+                  {item.name}
+                </Text>
+              </View>
+            ))}
           </Animated.View>
         </Animated.View>
       )}
@@ -103,6 +122,9 @@ const CollectionHome = (props: IProps) => {
   const { name, id, branchId } = props;
   const { cart, setCart, restaurant, setRestaurant } = useCurrentApp();
   const { showProductModal } = useModal();
+  const [restaurants, setRestaurants] = useState([]);
+  const [loading, setLoading] = useState<boolean>(true);
+
   const mockRestaurant = {
     _id: "mock_restaurant_1",
     name: "Số món đã đặt",
@@ -112,10 +134,13 @@ const CollectionHome = (props: IProps) => {
   useEffect(() => {
     const fetchData = async () => {
       try {
+        setLoading(true);
         const res = await axios.get(`${API_URL}/api/products/type/${props.id}`);
         setRestaurants(res.data.products);
       } catch (error) {
-        console.error("Error fetching data:", error);
+        console.error("Lỗi khi lấy dữ liệu:", error);
+      } finally {
+        setLoading(false);
       }
     };
 
@@ -126,13 +151,14 @@ const CollectionHome = (props: IProps) => {
     if (!restaurant) {
       setRestaurant(mockRestaurant);
     }
-  }, []);
-  const [restaurants, setRestaurants] = useState([]);
-  const [loading, setLoading] = useState<boolean>(false);
+  }, [restaurant, setRestaurant]);
+
   const handlePressItem = (item: IPropsProduct) => {
     showProductModal(item);
   };
+
   const handleQuantityChange = (item: any, action: "MINUS" | "PLUS") => {
+    if (action === "PLUS") showProductModal(item);
     if (!restaurant?._id) return;
 
     const total = action === "MINUS" ? -1 : 1;
@@ -192,7 +218,20 @@ const CollectionHome = (props: IProps) => {
   return (
     <>
       <View style={styles.spacer} />
-      {loading === false ? (
+      {loading ? (
+        <ContentLoader
+          speed={2}
+          width={sWidth}
+          height={230}
+          backgroundColor="#f3f3f3"
+          foregroundColor="#ecebeb"
+          style={styles.loader}
+        >
+          <Rect x="10" y="10" rx="5" ry="5" width={150} height="200" />
+          <Rect x="170" y="10" rx="5" ry="5" width={150} height="200" />
+          <Rect x="330" y="10" rx="5" ry="5" width={150} height="200" />
+        </ContentLoader>
+      ) : (
         <View style={styles.container}>
           <Pressable
             onPress={() =>
@@ -300,19 +339,6 @@ const CollectionHome = (props: IProps) => {
             }}
           />
         </View>
-      ) : (
-        <ContentLoader
-          speed={2}
-          width={sWidth}
-          height={230}
-          backgroundColor="#f3f3f3"
-          foregroundColor="#ecebeb"
-          style={styles.loader}
-        >
-          <Rect x="10" y="10" rx="5" ry="5" width={150} height="200" />
-          <Rect x="170" y="10" rx="5" ry="5" width={150} height="200" />
-          <Rect x="330" y="10" rx="5" ry="5" width={150} height="200" />
-        </ContentLoader>
       )}
     </>
   );
@@ -459,27 +485,23 @@ const styles = StyleSheet.create({
   },
   modalImage: {
     width: "100%",
-    height: 400,
+    height: 300,
     borderTopLeftRadius: 30,
     borderTopRightRadius: 30,
     borderBottomLeftRadius: 150,
     borderBottomRightRadius: 150,
   },
-  modalTextContainer: {
-    padding: 15,
-  },
   modalProductName: {
     fontSize: 18,
     fontFamily: FONTS.bold,
     color: APP_COLOR.BROWN,
-    marginTop: 15,
     textAlign: "center",
+    marginTop: 5,
   },
   modalProductPrice: {
     fontSize: 20,
     fontFamily: FONTS.bold,
     color: APP_COLOR.ORANGE,
-    marginTop: 10,
     textAlign: "center",
   },
   loader: {

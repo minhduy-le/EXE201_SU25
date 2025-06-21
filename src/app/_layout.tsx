@@ -139,6 +139,10 @@ const RootLayout = () => {
                   name="(auth)/order.success"
                   options={{ headerShown: false }}
                 ></Stack.Screen>
+                <Stack.Screen
+                  name="(auth)/feedback"
+                  options={{ headerShown: false }}
+                ></Stack.Screen>
                 <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
                 <Stack.Screen
                   name="(user)/product/create.modal"
