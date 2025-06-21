@@ -289,7 +289,7 @@ const OrderDetailsPage = () => {
                 style={[styles.customerValue, { color: APP_COLOR.ORANGE }]}
               >{`(${orderDetails.phone_number})`}</Text>
             </View>
-            <View style={{ flexDirection: "row" }}>
+            <View style={{ flexDirection: "row", alignItems: "center" }}>
               <Entypo
                 name="location-pin"
                 size={20}
@@ -407,10 +407,15 @@ const OrderDetailsPage = () => {
                 <Text style={styles.buttonText}>Hủy đơn</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.buttonFooter}
+                style={[
+                  styles.buttonFooter,
+                  { backgroundColor: APP_COLOR.ORANGE },
+                ]}
                 onPress={() => router.navigate("/(tabs)")}
               >
-                <Text style={styles.buttonText}>Về trang chủ</Text>
+                <Text style={[styles.buttonText, { color: APP_COLOR.WHITE }]}>
+                  Về trang chủ
+                </Text>
               </TouchableOpacity>
             </View>
           </View>
@@ -520,11 +525,12 @@ const styles = StyleSheet.create({
     width: 180,
     marginTop: 10,
     height: 42,
+    alignItems: "center",
   },
   buttonText: {
     color: APP_COLOR.BROWN,
     fontSize: 17,
-    fontFamily: FONTS.regular,
+    fontFamily: FONTS.bold,
     marginHorizontal: "auto",
   },
 });

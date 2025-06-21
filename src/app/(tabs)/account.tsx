@@ -41,7 +41,6 @@ const getCurrentDateTime = (): string => {
 };
 const ScreenWidth = Dimensions.get("screen").width;
 const AccountPage = () => {
-  const insets = useSafeAreaInsets();
   const [decodeToken, setDecodeToken] = useState<any>("");
   const { appState, setAppState } = useCurrentApp();
   const [time, setTime] = useState("");
@@ -194,10 +193,22 @@ const AccountPage = () => {
         </View>
       )}
       <View style={styles.buttonContainer}>
-        <View>
-          <Text>Thông tin tài khoản</Text>
-          <View>
-            <CusInfoText />
+        <View
+          style={{
+            paddingHorizontal: 10,
+            paddingTop: 10,
+          }}
+        >
+          <Text
+            style={[styles.text, { fontFamily: FONTS.bold, marginBottom: 5 }]}
+          >
+            Thông tin tài khoản
+          </Text>
+          <View style={{ marginHorizontal: 5 }}>
+            <CusInfoText title="Họ và tên" info={decodeToken.fullName} />
+            <CusInfoText title="Ngày sinh" info="07/07/2003" />
+            <CusInfoText title="SĐT" info={decodeToken.phone_number} />
+            <CusInfoText title="Email" info={decodeToken.email} />
           </View>
         </View>
         <Pressable
