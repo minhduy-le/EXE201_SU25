@@ -42,7 +42,6 @@ const statusMap: Record<string, StatusInfo> = {
   Canceled: { text: "Đã hủy", color: STATUS_COLORS.CANCELED },
 };
 
-// Assuming IOrderDetails is defined globally or imported
 interface IOrderDetails {
   orderId: number;
   userId: number;

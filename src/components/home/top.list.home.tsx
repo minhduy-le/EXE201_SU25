@@ -42,6 +42,12 @@ const icon = [
     source: require("@/assets/icons/thong-tin.png"),
     targetScreen: "account",
   },
+  {
+    key: 6,
+    name: "Phản hồi",
+    source: require("@/assets/icons/danh-gia.png"),
+    targetScreen: "account",
+  },
 ];
 const IconItem = ({ item }: any) => {
   const router = useRouter();
@@ -100,7 +106,7 @@ const styles = StyleSheet.create({
   },
   staggeredRow: {
     marginTop: 10,
-    marginLeft: 15,
+    marginLeft: 20,
   },
   iconWrapper: {
     marginHorizontal: 8,

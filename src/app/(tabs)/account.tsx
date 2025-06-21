@@ -10,10 +10,6 @@ import {
   Dimensions,
   ScrollView,
 } from "react-native";
-import {
-  SafeAreaView,
-  useSafeAreaInsets,
-} from "react-native-safe-area-context";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
 import { router } from "expo-router";
@@ -193,24 +189,26 @@ const AccountPage = () => {
         </View>
       )}
       <View style={styles.buttonContainer}>
-        <View
-          style={{
-            paddingHorizontal: 10,
-            paddingTop: 10,
-          }}
-        >
-          <Text
-            style={[styles.text, { fontFamily: FONTS.bold, marginBottom: 5 }]}
+        {appState && (
+          <View
+            style={{
+              paddingHorizontal: 10,
+              paddingTop: 10,
+            }}
           >
-            Thông tin tài khoản
-          </Text>
-          <View style={{ marginHorizontal: 5 }}>
-            <CusInfoText title="Họ và tên" info={decodeToken.fullName} />
-            <CusInfoText title="Ngày sinh" info="07/07/2003" />
-            <CusInfoText title="SĐT" info={decodeToken.phone_number} />
-            <CusInfoText title="Email" info={decodeToken.email} />
+            <Text
+              style={[styles.text, { fontFamily: FONTS.bold, marginBottom: 5 }]}
+            >
+              Thông tin tài khoản
+            </Text>
+            <View style={{ marginHorizontal: 5 }}>
+              <CusInfoText title="Họ và tên" info={decodeToken.fullName} />
+              <CusInfoText title="Ngày sinh" info={decodeToken.date_of_birth} />
+              <CusInfoText title="SĐT" info={decodeToken.phone_number} />
+              <CusInfoText title="Email" info={decodeToken.email} />
+            </View>
           </View>
-        </View>
+        )}
         <Pressable
           onPress={() => router.navigate("/(user)/account/info")}
           style={{
@@ -382,6 +380,9 @@ const AccountPage = () => {
           </Text>
         </Text>
       </View>
+      <View
+        style={{ backgroundColor: APP_COLOR.BACKGROUND_ORANGE, height: 30 }}
+      ></View>
     </ScrollView>
   );
 };
