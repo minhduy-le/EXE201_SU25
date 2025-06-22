@@ -29,6 +29,10 @@ interface IProps {
 }
 
 interface IPropsProduct {
+  ProductType: {
+    name: string;
+    productTypeId: number;
+  };
   name: string;
   productId: string;
   image: string;
@@ -84,7 +88,12 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
     item: IPropsProduct,
     action: "MINUS" | "PLUS"
   ) => {
-    if (action === "PLUS") showProductModal(item);
+    console.log(item.ProductType.productTypeId);
+
+    if (action === "PLUS" && item.ProductType.productTypeId === 1) {
+      showProductModal(item);
+    }
+
     if (!restaurant?._id) return;
 
     const total = action === "MINUS" ? -1 : 1;
@@ -268,7 +277,6 @@ const CollectionHome = (props: IProps) => {
     name: "Số món đã đặt",
     menu: [],
   };
-
   useEffect(() => {
     const fetchData = async () => {
       try {
@@ -355,7 +363,7 @@ const CollectionHome = (props: IProps) => {
               const quantity = getItemQuantity(item.productId);
               const isLastItem = index === restaurants.length - 1;
               return (
-                <Pressable onPress={() => handlePressItem(item)}>
+                <Pressable>
                   <View
                     style={[
                       styles.itemContainer,
