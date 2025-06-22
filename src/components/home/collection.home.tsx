@@ -20,7 +20,7 @@ import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import { FONTS } from "@/theme/typography";
 import axios from "axios";
 
-const { height: sHeight, width: sWidth } = Dimensions.get("window");
+const { width: sWidth } = Dimensions.get("window");
 
 interface IProps {
   name: string;
@@ -39,6 +39,7 @@ interface IPropsProduct {
 interface ModalContextType {
   showProductModal: (item: IPropsProduct) => void;
   hideProductModal: () => void;
+  handleQuantityChange: (item: IPropsProduct, action: "MINUS" | "PLUS") => void;
 }
 
 const ModalContext = createContext<ModalContextType | null>(null);
@@ -55,6 +56,20 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
   const [modalVisible, setModalVisible] = useState(false);
   const [selectedItem, setSelectedItem] = useState<IPropsProduct | null>(null);
   const [typeProducts, setTypeProducts] = useState([]);
+  const { cart, setCart, restaurant, setRestaurant } = useCurrentApp();
+
+  const mockRestaurant = {
+    _id: "mock_restaurant_1",
+    name: "Số món đã đặt",
+    menu: [],
+  };
+
+  useEffect(() => {
+    if (!restaurant) {
+      setRestaurant(mockRestaurant);
+    }
+  }, [restaurant, setRestaurant]);
+
   const showProductModal = (item: IPropsProduct) => {
     setSelectedItem(item);
     setModalVisible(true);
@@ -64,6 +79,68 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
     setModalVisible(false);
     setSelectedItem(null);
   };
+
+  const handleQuantityChange = (
+    item: IPropsProduct,
+    action: "MINUS" | "PLUS"
+  ) => {
+    if (action === "PLUS") showProductModal(item);
+    if (!restaurant?._id) return;
+
+    const total = action === "MINUS" ? -1 : 1;
+    const priceChange = total * item.price;
+
+    const newCart = { ...cart };
+    if (!newCart[restaurant._id]) {
+      newCart[restaurant._id] = {
+        sum: 0,
+        quantity: 0,
+        items: {},
+      };
+    }
+    newCart[restaurant._id].sum =
+      (newCart[restaurant._id].sum || 0) + priceChange;
+    newCart[restaurant._id].quantity =
+      (newCart[restaurant._id].quantity || 0) + total;
+
+    if (!newCart[restaurant._id].items[item.productId]) {
+      newCart[restaurant._id].items[item.productId] = {
+        data: {
+          ...item,
+          basePrice: item.price,
+          title: item.name,
+        },
+        quantity: 0,
+      };
+    }
+
+    const currentQuantity =
+      (newCart[restaurant._id].items[item.productId].quantity || 0) + total;
+
+    if (currentQuantity <= 0) {
+      delete newCart[restaurant._id].items[item.productId];
+      if (Object.keys(newCart[restaurant._id].items).length === 0) {
+        delete newCart[restaurant._id];
+      }
+    } else {
+      newCart[restaurant._id].items[item.productId] = {
+        data: {
+          ...item,
+          basePrice: item.price,
+          title: item.name,
+        },
+        quantity: currentQuantity,
+      };
+    }
+
+    setCart(newCart);
+  };
+
+  const getItemQuantity = (itemId: string) => {
+    if (!restaurant?._id) return 0;
+    return cart[restaurant._id]?.items[itemId]?.quantity || 0;
+  };
+
   useEffect(() => {
     const fetchTypeProducts = async () => {
       try {
@@ -75,10 +152,13 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
     };
     fetchTypeProducts();
   }, []);
+
   return (
-    <ModalContext.Provider value={{ showProductModal, hideProductModal }}>
+    <ModalContext.Provider
+      value={{ showProductModal, hideProductModal, handleQuantityChange }}
+    >
       {children}
-      {modalVisible && (
+      {modalVisible && selectedItem && (
         <Animated.View entering={FadeIn} style={styles.modalOverlay}>
           <Pressable
             style={styles.modalBackground}
@@ -104,13 +184,71 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
                 {currencyFormatter(selectedItem?.price || 0)}
               </Text>
             </Text>
-            {typeProducts.map((item: IPropsProduct) => (
-              <View>
-                <Text style={[styles.itemName, { maxWidth: 300 }]}>
+
+            {typeProducts.map((item: IPropsProduct, index) => (
+              <View
+                style={{
+                  flexDirection: "row",
+                  alignItems: "center",
+                  marginHorizontal: 10,
+                  justifyContent: "space-between",
+                }}
+                key={item.productId}
+              >
+                <Text style={[styles.itemName, { flex: 0.8 }]}>
                   {item.name}
                 </Text>
+                <View
+                  style={[styles.quantityContainer, { marginHorizontal: 0 }]}
+                >
+                  <Pressable
+                    onPress={() => handleQuantityChange(item, "MINUS")}
+                    style={({ pressed }) => ({
+                      opacity:
+                        getItemQuantity(item.productId) > 0
+                          ? pressed
+                            ? 0.5
+                            : 1
+                          : 0.3,
+                    })}
+                    disabled={getItemQuantity(item.productId) === 0}
+                  >
+                    <AntDesign
+                      name="minuscircle"
+                      size={24}
+                      color={
+                        getItemQuantity(item.productId) > 0
+                          ? APP_COLOR.BUTTON_YELLOW
+                          : APP_COLOR.BROWN
+                      }
+                    />
+                  </Pressable>
+                  <Text style={styles.quantityText}>
+                    {getItemQuantity(item.productId)}
+                  </Text>
+                  <Pressable
+                    onPress={() => handleQuantityChange(item, "PLUS")}
+                    style={({ pressed }) => ({
+                      opacity: pressed ? 0.5 : 1,
+                    })}
+                  >
+                    <AntDesign
+                      name="pluscircle"
+                      size={24}
+                      color={APP_COLOR.BUTTON_YELLOW}
+                    />
+                  </Pressable>
+                </View>
               </View>
             ))}
+            <View>
+              <Text style={[styles.headerText, { alignSelf: "center" }]}>
+                Tổng giá tiền:{" "}
+                <Text style={{ fontFamily: FONTS.bold }}>
+                  {currencyFormatter(cart?.mock_restaurant_1?.sum) || 0}
+                </Text>
+              </Text>
+            </View>
           </Animated.View>
         </Animated.View>
       )}
@@ -121,7 +259,7 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
 const CollectionHome = (props: IProps) => {
   const { name, id, branchId } = props;
   const { cart, setCart, restaurant, setRestaurant } = useCurrentApp();
-  const { showProductModal } = useModal();
+  const { showProductModal, handleQuantityChange } = useModal();
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState<boolean>(true);
 
@@ -155,59 +293,6 @@ const CollectionHome = (props: IProps) => {
 
   const handlePressItem = (item: IPropsProduct) => {
     showProductModal(item);
-  };
-
-  const handleQuantityChange = (item: any, action: "MINUS" | "PLUS") => {
-    if (action === "PLUS") showProductModal(item);
-    if (!restaurant?._id) return;
-
-    const total = action === "MINUS" ? -1 : 1;
-    const priceChange = total * item.productPrice;
-
-    const newCart = { ...cart };
-    if (!newCart[restaurant._id]) {
-      newCart[restaurant._id] = {
-        sum: 0,
-        quantity: 0,
-        items: {},
-      };
-    }
-    newCart[restaurant._id].sum =
-      (newCart[restaurant._id].sum || 0) + priceChange;
-    newCart[restaurant._id].quantity =
-      (newCart[restaurant._id].quantity || 0) + total;
-
-    if (!newCart[restaurant._id].items[item.productId]) {
-      newCart[restaurant._id].items[item.productId] = {
-        data: {
-          ...item,
-          basePrice: item.productPrice,
-          title: item.productName,
-        },
-        quantity: 0,
-      };
-    }
-
-    const currentQuantity =
-      (newCart[restaurant._id].items[item.productId].quantity || 0) + total;
-
-    if (currentQuantity <= 0) {
-      delete newCart[restaurant._id].items[item.productId];
-      if (Object.keys(newCart[restaurant._id].items).length === 0) {
-        delete newCart[restaurant._id];
-      }
-    } else {
-      newCart[restaurant._id].items[item.productId] = {
-        data: {
-          ...item,
-          basePrice: item.productPrice,
-          title: item.productName,
-        },
-        quantity: currentQuantity,
-      };
-    }
-
-    setCart(newCart);
   };
 
   const getItemQuantity = (itemId: string) => {
