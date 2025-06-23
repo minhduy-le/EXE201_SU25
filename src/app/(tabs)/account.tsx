@@ -21,6 +21,7 @@ import logo from "@/assets/logo.png";
 import ShareButton from "@/components/button/share.button";
 import icon from "@/assets/icons/loi-chuc.png";
 import CusInfoText from "@/components/account/user.info.text";
+import Toast from "react-native-root-toast";
 
 const getCurrentDateTime = (): string => {
   const now = new Date();
@@ -295,6 +296,34 @@ const AccountPage = () => {
           />
         </Pressable>
         <Pressable
+          onPress={() => Toast.show("Notification")}
+          style={{
+            paddingVertical: 15,
+            paddingHorizontal: 10,
+            borderBottomColor: "#eee",
+            borderBottomWidth: 1,
+            flexDirection: "row",
+            justifyContent: "space-between",
+            alignItems: "center",
+          }}
+        >
+          <View
+            style={{
+              flexDirection: "row",
+              gap: 10,
+              alignItems: "center",
+            }}
+          >
+            <Feather name="bell" size={24} color={APP_COLOR.BROWN} />
+            <Text style={styles.btnText}>Thông báo</Text>
+          </View>
+          <MaterialIcons
+            name="navigate-next"
+            size={24}
+            color={APP_COLOR.BROWN}
+          />
+        </Pressable>
+        <Pressable
           onPress={() =>
             Alert.alert("App Tấm Tắc", "Ứng dụng Cơm Tấm Tắc ver 1.0.2")
           }
@@ -391,7 +420,6 @@ const styles = StyleSheet.create({
   img: {
     height: 100,
     width: 150,
-    marginTop: 10,
     alignSelf: "center",
   },
   btnText: {
@@ -402,8 +430,8 @@ const styles = StyleSheet.create({
   headerContainer: {
     flexDirection: "row",
     marginHorizontal: 10,
-    paddingBottom: 5,
-    marginBottom: 10,
+    paddingBottom: 3,
+    marginBottom: 3,
     borderBottomColor: APP_COLOR.BROWN,
     borderBottomWidth: 0.5,
     alignItems: "center",

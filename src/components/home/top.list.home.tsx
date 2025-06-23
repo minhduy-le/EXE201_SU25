@@ -44,9 +44,9 @@ const icon = [
   },
   {
     key: 6,
-    name: "Phản hồi",
-    source: require("@/assets/icons/danh-gia.png"),
-    targetScreen: "feedback",
+    name: "Thông báo",
+    source: require("@/assets/icons/thong-bao.png"),
+    targetScreen: "notification",
   },
 ];
 const IconItem = ({ item }: any) => {

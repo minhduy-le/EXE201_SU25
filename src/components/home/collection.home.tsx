@@ -88,8 +88,6 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
     item: IPropsProduct,
     action: "MINUS" | "PLUS"
   ) => {
-    console.log(item.ProductType.productTypeId);
-
     if (action === "PLUS" && item.ProductType.productTypeId === 1) {
       showProductModal(item);
     }
@@ -118,7 +116,7 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
           ...item,
           basePrice: item.price,
           title: item.name,
-        },
+        } as ICartItem,
         quantity: 0,
       };
     }
@@ -137,7 +135,7 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
           ...item,
           basePrice: item.price,
           title: item.name,
-        },
+        } as ICartItem,
         quantity: currentQuantity,
       };
     }
@@ -186,14 +184,68 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
               style={styles.modalImage}
               resizeMode="cover"
             />
-            <Text style={styles.modalProductName}>
-              {selectedItem?.description}{" "}
-              <Text style={styles.modalProductPrice}>
-                {" "}
-                {currencyFormatter(selectedItem?.price || 0)}
+            <View
+              style={{
+                flexDirection: "row",
+                alignItems: "center",
+                justifyContent: "space-between",
+                marginBottom: 10,
+                paddingBottom: 1,
+              }}
+            >
+              <Text style={styles.modalProductName}>
+                {selectedItem?.description}{" "}
+                <Text style={styles.modalProductPrice}>
+                  {" "}
+                  {currencyFormatter(selectedItem?.price || 0)}
+                </Text>
               </Text>
-            </Text>
 
+              <View
+                style={[
+                  styles.quantityContainer,
+                  { marginHorizontal: 10, marginVertical: 10 },
+                ]}
+              >
+                <Pressable
+                  onPress={() => handleQuantityChange(selectedItem!, "MINUS")}
+                  style={({ pressed }) => ({
+                    opacity:
+                      getItemQuantity(selectedItem!.productId) > 0
+                        ? pressed
+                          ? 0.5
+                          : 1
+                        : 0.3,
+                  })}
+                  disabled={getItemQuantity(selectedItem!.productId) === 0}
+                >
+                  <AntDesign
+                    name="minuscircle"
+                    size={24}
+                    color={
+                      getItemQuantity(selectedItem!.productId) > 0
+                        ? APP_COLOR.BUTTON_YELLOW
+                        : APP_COLOR.BROWN
+                    }
+                  />
+                </Pressable>
+                <Text style={styles.quantityText}>
+                  {getItemQuantity(selectedItem!.productId)}
+                </Text>
+                <Pressable
+                  onPress={() => handleQuantityChange(selectedItem!, "PLUS")}
+                  style={({ pressed }) => ({
+                    opacity: pressed ? 0.5 : 1,
+                  })}
+                >
+                  <AntDesign
+                    name="pluscircle"
+                    size={24}
+                    color={APP_COLOR.BUTTON_YELLOW}
+                  />
+                </Pressable>
+              </View>
+            </View>
             {typeProducts.map((item: IPropsProduct, index) => (
               <View
                 style={{
@@ -201,11 +253,18 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
                   alignItems: "center",
                   marginHorizontal: 10,
                   justifyContent: "space-between",
+                  paddingBottom: 1,
+                  marginBottom: 10,
+                  borderBottomColor: APP_COLOR.GREY,
+                  borderBottomWidth: 0.2,
                 }}
                 key={item.productId}
               >
-                <Text style={[styles.itemName, { flex: 0.8 }]}>
-                  {item.name}
+                <Text style={[styles.itemName]}>
+                  {item.name}{" "}
+                  <Text style={{ color: APP_COLOR.GREY, fontSize: 12 }}>
+                    +{currencyFormatter(item.price)}
+                  </Text>
                 </Text>
                 <View
                   style={[styles.quantityContainer, { marginHorizontal: 0 }]}
@@ -267,11 +326,10 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
 
 const CollectionHome = (props: IProps) => {
   const { name, id, branchId } = props;
-  const { cart, setCart, restaurant, setRestaurant } = useCurrentApp();
+  const { cart, restaurant, setRestaurant } = useCurrentApp();
   const { showProductModal, handleQuantityChange } = useModal();
   const [restaurants, setRestaurants] = useState([]);
   const [loading, setLoading] = useState<boolean>(true);
-
   const mockRestaurant = {
     _id: "mock_restaurant_1",
     name: "Số món đã đặt",
@@ -386,7 +444,7 @@ const CollectionHome = (props: IProps) => {
                       <Text
                         numberOfLines={1}
                         ellipsizeMode="tail"
-                        style={styles.itemName}
+                        style={[styles.itemName, { maxWidth: 130 }]}
                       >
                         {item.description}
                       </Text>
@@ -514,8 +572,6 @@ const styles = StyleSheet.create({
     padding: 5,
   },
   itemName: {
-    fontWeight: "600",
-    maxWidth: 130,
     fontFamily: FONTS.medium,
     fontSize: 15,
     color: APP_COLOR.BROWN,
@@ -588,11 +644,11 @@ const styles = StyleSheet.create({
     fontSize: 18,
     fontFamily: FONTS.bold,
     color: APP_COLOR.BROWN,
-    textAlign: "center",
     marginTop: 5,
+    marginHorizontal: 10,
   },
   modalProductPrice: {
-    fontSize: 20,
+    fontSize: 15,
     fontFamily: FONTS.bold,
     color: APP_COLOR.ORANGE,
     textAlign: "center",
