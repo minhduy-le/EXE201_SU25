@@ -2,6 +2,7 @@ import { useCurrentApp } from "@/context/app.context";
 import { FONTS } from "@/theme/typography";
 import { jwtDecode } from "jwt-decode";
 import { currencyFormatter } from "@/utils/api";
+import { calculateTotalPrice } from "@/utils/cart";
 import { APP_COLOR, BASE_URL } from "@/utils/constant";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState } from "react";
@@ -298,34 +299,6 @@ const PlaceOrderPage = () => {
       subscription.remove();
     };
   }, []);
-  const calculateTotalPrice = () => {
-    try {
-      if (!restaurant?._id) {
-        return 0;
-      }
-      const restaurantCart = cart[restaurant._id];
-      if (!restaurantCart || !restaurantCart.items) {
-        return 0;
-      }
-      const items = restaurantCart.items;
-      let total = 0;
-
-      Object.values(items).forEach((item: any) => {
-        const price = Number(
-          item?.data?.price ||
-            item?.data?.basePrice ||
-            item?.data?.productPrice ||
-            0
-        );
-        const quantity = Number(item?.quantity || 0);
-        total += price * quantity;
-      });
-      return total;
-    } catch (error) {
-      console.error("Lỗi tính tổng giá:", error);
-      return 0;
-    }
-  };
   const handleSelectAddress = (address: any, locationReal: any) => {
     if (locationReal) {
       address.address = locationReal;
@@ -633,7 +606,9 @@ const PlaceOrderPage = () => {
                           color: APP_COLOR.BROWN,
                         }}
                       >
-                        {currencyFormatter(calculateTotalPrice() || 0)}
+                        {currencyFormatter(
+                          calculateTotalPrice(cart, restaurant?._id) || 0
+                        )}
                       </Text>
                     </View>
                     <View style={styles.textInputView}>
@@ -690,7 +665,9 @@ const PlaceOrderPage = () => {
                           color: APP_COLOR.BROWN,
                         }}
                       >
-                        {currencyFormatter(calculateTotalPrice() + 20000 || 0)}
+                        {currencyFormatter(
+                          calculateTotalPrice(cart, restaurant?._id) + 20000 || 0
+                        )}
                       </Text>
                     </View>
                   </View>
