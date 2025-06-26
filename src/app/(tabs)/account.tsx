@@ -1,5 +1,5 @@
 import { useCurrentApp } from "@/context/app.context";
-import { APP_COLOR } from "@/utils/constant";
+import { API_URL, APP_COLOR } from "@/utils/constant";
 import {
   View,
   Text,
@@ -12,9 +12,9 @@ import {
 } from "react-native";
 import MaterialIcons from "@expo/vector-icons/MaterialIcons";
 import Feather from "@expo/vector-icons/Feather";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import AsyncStorage from "@react-native-async-storage/async-storage";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { jwtDecode } from "jwt-decode";
 import { FONTS, typography } from "@/theme/typography";
 import logo from "@/assets/logo.png";
@@ -22,6 +22,7 @@ import ShareButton from "@/components/button/share.button";
 import icon from "@/assets/icons/loi-chuc.png";
 import CusInfoText from "@/components/account/user.info.text";
 import { formatDateOnlyToDDMMYYYY } from "@/utils/function";
+import axios from "axios";
 
 const getCurrentDateTime = (): string => {
   const now = new Date();
@@ -41,26 +42,47 @@ const AccountPage = () => {
   const [decodeToken, setDecodeToken] = useState<any>("");
   const { appState, setAppState } = useCurrentApp();
   const [time, setTime] = useState("");
+  const decodeAndSetToken = async () => {
+    try {
+      const token = await AsyncStorage.getItem("access_token");
+      if (token) {
+        const decoded = jwtDecode(token);
+        setDecodeToken(decoded);
+
+        if (decoded && decoded.id) {
+          try {
+            const res = await axios.get(
+              `${API_URL}/api/profiles/${decoded.id}`
+            );
+            console.log(res.data.user);
+
+            setDecodeToken(res.data.user);
+          } catch (apiError) {
+            console.error("Error fetching fresh user data:", apiError);
+          }
+        }
+      } else {
+        setDecodeToken("");
+      }
+    } catch (error) {
+      console.error("Error retrieving or decoding access token:", error);
+      setDecodeToken("");
+    }
+  };
+
   useEffect(() => {
     setTime(getCurrentDateTime());
   }, []);
 
   useEffect(() => {
-    const getAccessToken = async () => {
-      try {
-        const token = await AsyncStorage.getItem("access_token");
-        if (token) {
-          const decoded = jwtDecode(token);
-          setDecodeToken(decoded);
-        } else {
-          console.log("No access token found.");
-        }
-      } catch (error) {
-        console.error("Error retrieving access token:", error);
-      }
-    };
-    getAccessToken();
-  }, []);
+    decodeAndSetToken();
+  }, [appState]);
+  useFocusEffect(
+    useCallback(() => {
+      decodeAndSetToken();
+    }, [])
+  );
+
   const handleLogout = () => {
     Alert.alert("Đăng xuất", "Bạn chắc chắn đăng xuất người dùng ?", [
       {
@@ -218,7 +240,7 @@ const AccountPage = () => {
           </View>
         )}
         <Pressable
-          onPress={() => router.navigate("/(user)/account/info")}
+          onPress={() => router.replace("/(user)/account/info")}
           style={{
             paddingVertical: 15,
             paddingHorizontal: 10,

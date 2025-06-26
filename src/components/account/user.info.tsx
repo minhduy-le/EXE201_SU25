@@ -3,83 +3,133 @@ import { UpdateUserSchema } from "@/utils/validate.schema";
 import { Formik } from "formik";
 import { View, Text, StyleSheet, ScrollView, Image } from "react-native";
 import { jwtDecode } from "jwt-decode";
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useState } from "react";
 import AsyncStorage from "@react-native-async-storage/async-storage";
 import ShareButton from "../button/share.button";
 import { APP_COLOR } from "@/utils/constant";
 import { FONTS } from "@/theme/typography";
 import logo from "@/assets/logo.png";
-import { useFocusEffect } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
+import Toast from "react-native-root-toast";
+import axios from "axios";
+import { values } from "lodash";
+
 interface DecodedToken {
+  id: number;
   fullName: string;
   email: string;
   phone_number: string;
   date_of_birth: string;
 }
+
 const UserInfo = () => {
-  const [decodeToken, setDecodeToken] = useState<DecodedToken>();
-  const getAccessToken = async () => {
+  const [decodeToken, setDecodeToken] = useState<DecodedToken | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [token, setToken] = useState<string | null>(null);
+  const getAccessToken = useCallback(async () => {
     try {
+      setIsLoading(true);
       const token = await AsyncStorage.getItem("access_token");
+      setToken(token);
       if (token) {
-        const decoded = jwtDecode(token);
+        const decoded = jwtDecode<DecodedToken>(token);
         setDecodeToken(decoded);
       } else {
-        console.log("No access token found.");
+        Toast.show("No access token found. Please log in.", {
+          duration: Toast.durations.LONG,
+          textColor: "white",
+          backgroundColor: APP_COLOR.CANCEL,
+          opacity: 1,
+        });
       }
     } catch (error) {
       console.error("Error retrieving access token:", error);
+      Toast.show("Failed to load user information.", {
+        duration: Toast.durations.LONG,
+        textColor: "white",
+        backgroundColor: APP_COLOR.CANCEL,
+        opacity: 1,
+      });
+    } finally {
+      setIsLoading(false);
     }
-  };
-  useEffect(() => {
-    getAccessToken();
   }, []);
+
   useFocusEffect(
     useCallback(() => {
       getAccessToken();
-    }, [])
+    }, [getAccessToken])
   );
-  // const handleUpdateUser = async (name: string, phone: string) => {
-  //   if (sampleData?.id) {
-  //       const res = await updateUserInfo({ id: sampleData.id, name, phone });
-  //       if(res.data) {
-  //         Toast.show("Cập nhật thông tin user thành công!", {
-  //           duration: Toast.durations.LONG,
-  //           textColor: "white",
-  //           backgroundColor: APP_COLOR.ORANGE,
-  //           opacity: 1,
-  //         });
-  //         setDecodeToken((prev) =>
-  //           prev
-  //             ? {
-  //                 ...prev,
-  //                 name,
-  //                 phone,
-  //               }
-  //             : null
-  //         );
-  //       } else {
-  //         const m = Array.isArray(res.message) ? res.message[0] : res.message;
-  //         Toast.show(m, {
-  //           duration: Toast.durations.LONG,
-  //           textColor: "white",
-  //           backgroundColor: APP_COLOR.ORANGE,
-  //           opacity: 1,
-  //         });
-  //       }
-  //   }
-  // };
 
-  // if (!decodeToken) {
-  //   return null;
-  // }
+  const handleUpdateUser = async (
+    id: number,
+    fullName: string,
+    email: string,
+    phone_number: string,
+    date_of_birth: string
+  ) => {
+    if (!decodeToken) {
+      Toast.show("User information not available.", {
+        duration: Toast.durations.LONG,
+        textColor: "white",
+        backgroundColor: APP_COLOR.CANCEL,
+        opacity: 1,
+      });
+      return;
+    }
+    setIsSubmitting(true);
+    try {
+      const response = await axios.put(
+        `https://wdp301-su25.space/api/profiles/${id}`,
+        {
+          fullName,
+          email,
+          phone_number,
+          date_of_birth,
+        },
+        {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+      router.push("/(tabs)/account");
+    } catch (error) {
+      console.error("Error updating user:", error);
+      Toast.show("Failed to update user information.", {
+        duration: Toast.durations.LONG,
+        textColor: "white",
+        backgroundColor: APP_COLOR.CANCEL,
+        opacity: 1,
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  if (isLoading) {
+    return (
+      <View style={styles.container}>
+        <Text>Loading...</Text>
+      </View>
+    );
+  }
+
+  if (!decodeToken) {
+    return (
+      <View style={styles.container}>
+        <Text>No user information available.</Text>
+      </View>
+    );
+  }
 
   return (
     <ScrollView showsVerticalScrollIndicator={false}>
       <View style={styles.container}>
         <Image
           source={logo}
-          style={{ height: 150, width: 300, marginHorizontal: "auto" }}
+          style={{ height: 150, width: 300, alignSelf: "center" }}
         />
         <View style={{ alignItems: "center", gap: 5 }}>
           <Text
@@ -96,15 +146,22 @@ const UserInfo = () => {
           enableReinitialize
           validationSchema={UpdateUserSchema}
           initialValues={{
-            fullName: decodeToken?.fullName,
-            phone_number: decodeToken?.phone_number,
-            email: decodeToken?.email,
-            date_of_birth: decodeToken?.date_of_birth,
+            id: decodeToken.id || 0,
+            fullName: decodeToken.fullName || "",
+            phone_number: decodeToken.phone_number || "",
+            email: decodeToken.email || "",
+            date_of_birth: decodeToken.date_of_birth || "",
           }}
-          onSubmit={
-            (values) => console.log("Test")
-            // handleUpdateUser(values?.name ?? "", values?.phone ?? "")
-          }
+          onSubmit={(values) => {
+            console.log(values);
+            // handleUpdateUser(
+            //   values.fullName,
+            //   values.phoneNumber,
+            //   values.email,
+            //   values.password,
+            //   values.date_of_birth
+            // );
+          }}
         >
           {({
             handleChange,
@@ -113,12 +170,10 @@ const UserInfo = () => {
             values,
             errors,
             touched,
-            isValid,
-            dirty,
           }) => (
-            <View style={{ marginTop: 20, gap: 15, marginHorizontal: 10 }}>
+            <View style={{ marginTop: 20, gap: 15 }}>
               <ShareInput
-                title="Họ và tên"
+                title="Full Name"
                 onChangeText={handleChange("fullName")}
                 onBlur={handleBlur("fullName")}
                 value={values.fullName}
@@ -133,9 +188,8 @@ const UserInfo = () => {
                 error={errors.email}
                 touched={touched.email}
               />
-
               <ShareInput
-                title="Số điện thoại"
+                title="Phone Number"
                 onChangeText={handleChange("phone_number")}
                 onBlur={handleBlur("phone_number")}
                 value={values.phone_number}
@@ -143,45 +197,58 @@ const UserInfo = () => {
                 touched={touched.phone_number}
               />
               <ShareInput
-                title="Ngày sinh"
+                title="Date of Birth"
                 onChangeText={handleChange("date_of_birth")}
                 onBlur={handleBlur("date_of_birth")}
                 value={values.date_of_birth}
                 error={errors.date_of_birth}
                 touched={touched.date_of_birth}
-                isDatePicker={true}
+                isDatePicker
               />
+
+              <View style={{ alignSelf: "center" }}>
+                <ShareButton
+                  title={"Lưu thay đổi"}
+                  btnStyle={{
+                    backgroundColor: APP_COLOR.BROWN,
+                    width: "50%",
+                    borderWidth: 0.5,
+                    borderRadius: 10,
+                    borderColor: APP_COLOR.BROWN,
+                    marginTop: 20,
+                  }}
+                  textStyle={{
+                    color: APP_COLOR.WHITE,
+                    fontSize: 17,
+                    marginHorizontal: 20,
+                    fontFamily: FONTS.regular,
+                  }}
+                  onPress={() =>
+                    handleUpdateUser(
+                      values.id,
+                      values.fullName,
+                      values.email,
+                      values.phone_number,
+                      values.date_of_birth
+                    )
+                  }
+                  loading={isSubmitting}
+                />
+              </View>
             </View>
           )}
         </Formik>
-        <ShareButton
-          title="Lưu thay đổi"
-          btnStyle={{
-            backgroundColor: APP_COLOR.BROWN,
-            width: "auto",
-            marginHorizontal: "25%",
-            borderWidth: 0.5,
-            borderRadius: 10,
-            borderColor: APP_COLOR.BROWN,
-            marginTop: 30,
-          }}
-          textStyle={{
-            color: APP_COLOR.WHITE,
-            fontSize: 17,
-            marginHorizontal: 20,
-            fontFamily: FONTS.regular,
-          }}
-          onPress={() => console.log("Lưu")}
-          // onPress={() => handleUpdateUser(values.name, values.phone)}
-        />
       </View>
     </ScrollView>
   );
 };
+
 const styles = StyleSheet.create({
   container: {
     paddingHorizontal: 15,
     paddingTop: 50,
+    flex: 1,
   },
 });
+
 export default UserInfo;
