@@ -153,7 +153,6 @@ const UserInfo = () => {
             date_of_birth: decodeToken.date_of_birth || "",
           }}
           onSubmit={(values) => {
-            console.log(values);
             // handleUpdateUser(
             //   values.fullName,
             //   values.phoneNumber,
