@@ -191,16 +191,16 @@ const RootLayout = () => {
                   name="(user)/account/password"
                   options={{ headerShown: false }}
                 />
-                <Stack.Screen
-                  name="(user)/account/customer.info"
-                  options={{ headerTitle: "Nhập thông tin người dùng" }}
-                />
                 <Tabs.Screen
                   name="(user)/like/[id]"
                   options={{ headerShown: false }}
                 />
                 <Tabs.Screen
                   name="(user)/like/feedback.success"
+                  options={{ headerShown: false }}
+                />
+                <Tabs.Screen
+                  name="(user)/product/checkout.webview"
                   options={{ headerShown: false }}
                 />
               </Stack>
