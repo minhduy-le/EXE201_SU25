@@ -1,5 +1,5 @@
 import LoadingOverlay from "@/components/loading/overlay";
-import { resendCodeAPI, verifyEmailCustomer } from "@/utils/api";
+import { resendCodeAPI, verifyEmailCustomer, verifyCodeAPI } from "@/utils/api";
 import { APP_COLOR } from "@/utils/constant";
 import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useRef, useState } from "react";
@@ -74,7 +74,7 @@ const VerifyPage = () => {
   const [countdown, setCountdown] = useState<number>(0);
   const otpRef = useRef<OTPTextView>(null);
   const [code, setCode] = useState<string>("");
-  const { email } = useLocalSearchParams();
+  const { email, phoneNumber } = useLocalSearchParams();
   const [coundownEmail, setCoundownEmail] = useState<number>(600);
   useEffect(() => {
     let timer: number | null;
@@ -89,13 +89,11 @@ const VerifyPage = () => {
     };
   }, [countdown, coundownEmail]);
 
-  const verifyCustomerEmail = async (email: string, otp: string) => {
+  const verifyCustomerPhone = async (phoneNumber: string, otp: string) => {
     try {
-      console.log(email, otp);
       Keyboard.dismiss();
       setIsSubmit(true);
-      const verifyRes = await verifyEmailCustomer(email, otp);
-      console.log(verifyRes);
+      const verifyRes = await verifyCodeAPI(phoneNumber, otp);
       setIsSubmit(false);
       if (verifyRes) {
         Toast.show("Xác thực tài khoản thành công", {
@@ -115,15 +113,15 @@ const VerifyPage = () => {
         });
       }
     } catch (error) {
-      console.log("Lỗi không thể xác thực được email", error);
+      console.log("Lỗi không thể xác thực được số điện thoại", error);
     }
   };
 
   useEffect(() => {
-    if (code && code.length === 6) {
-      verifyCustomerEmail;
+    if (code && code.length === 6 && phoneNumber) {
+      verifyCustomerPhone(phoneNumber as string, code);
     }
-  }, [code]);
+  }, [code, phoneNumber]);
 
   const handleResendCode = async () => {
     if (countdown > 0) return;

@@ -128,7 +128,7 @@ const AccountPage = () => {
                 },
               ]}
             >
-              {decodeToken.fullName}
+              {decodeToken.fullName ? decodeToken.fullName : "Lê Minh Duy"}
             </Text>
           )}
         </View>
@@ -209,7 +209,7 @@ const AccountPage = () => {
                 },
               ]}
             >
-              {decodeToken.fullName}
+              {decodeToken.fullName ? decodeToken.fullName : "Lê Minh Duy"}
             </Text>
             <Image source={icon} style={{ height: 39, width: 80 }} />
           </View>
@@ -229,13 +229,36 @@ const AccountPage = () => {
               Thông tin tài khoản
             </Text>
             <View style={{ marginHorizontal: 5 }}>
-              <CusInfoText title="Họ và tên" info={decodeToken.fullName} />
+              <CusInfoText
+                title="Họ và tên"
+                info={
+                  decodeToken.fullName ? decodeToken.fullName : "Lê Minh Duy"
+                }
+              />
               <CusInfoText
                 title="Ngày sinh"
-                info={formatDateOnlyToDDMMYYYY(decodeToken.date_of_birth)}
+                info={
+                  decodeToken.date_of_birth
+                    ? decodeToken.date_of_birth
+                    : "07/07/2003"
+                }
               />
-              <CusInfoText title="SĐT" info={decodeToken.phone_number} />
-              <CusInfoText title="Email" info={decodeToken.email} />
+              <CusInfoText
+                title="SĐT"
+                info={
+                  decodeToken.phone_number
+                    ? decodeToken.phone_number
+                    : "0889679561"
+                }
+              />
+              <CusInfoText
+                title="Email"
+                info={
+                  decodeToken.email
+                    ? decodeToken.email
+                    : "minhduy.fptu.se@gmail.com"
+                }
+              />
             </View>
           </View>
         )}

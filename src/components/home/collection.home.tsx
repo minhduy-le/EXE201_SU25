@@ -21,6 +21,7 @@ import React from "react";
 import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import { FONTS } from "@/theme/typography";
 import axios from "axios";
+import { getProductsByTypeAPI } from "@/utils/api";
 
 const { width: sWidth } = Dimensions.get("window");
 
@@ -334,6 +335,7 @@ export const ModalProvider = ({ children }: { children: React.ReactNode }) => {
 
 const CollectionHome = (props: IProps) => {
   const { name, id, branchId } = props;
+  console.log("[DEBUG] CollectionHome props.id:", id);
   const { cart, restaurant, setRestaurant } = useCurrentApp();
   const { showProductModal, handleQuantityChange } = useModal();
   const [restaurants, setRestaurants] = useState([]);
@@ -347,15 +349,23 @@ const CollectionHome = (props: IProps) => {
     const fetchData = async () => {
       try {
         setLoading(true);
-        const res = await axios.get(`${API_URL}/api/products/type/${props.id}`);
-        setRestaurants(res.data.products);
+        const res = await getProductsByTypeAPI(id);
+        console.log("[DEBUG] API response:", res.data);
+        const products = res.data.data.content.map((item: any) => ({
+          productId: item.productId,
+          name: item.productName,
+          image: item.productImage,
+          description: item.productDescription,
+          price: item.productPrice,
+          ProductType: { name: item.productType, productTypeId: id },
+        }));
+        setRestaurants(products);
       } catch (error) {
         console.error("Lỗi khi lấy dữ liệu:", error);
       } finally {
         setLoading(false);
       }
     };
-
     fetchData();
   }, [id, branchId]);
 

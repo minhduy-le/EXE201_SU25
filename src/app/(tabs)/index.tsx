@@ -22,8 +22,8 @@ import { FONTS } from "@/theme/typography";
 import ItemQuantity from "@/components/order/item.quantity";
 
 interface ITem {
+  id: number;
   name: string;
-  productTypeId: number;
 }
 const HomeTab = () => {
   const [mounted, setMounted] = useState(false);
@@ -103,13 +103,12 @@ const HomeTab = () => {
       <CustomFlatList
         data={collectionData}
         style={styles.list}
-        renderItem={({ item }: { item: ITem }) => (
-          <CollectionHome
-            name={item.name}
-            id={item.productTypeId}
-            branchId={branchId}
-          />
-        )}
+        renderItem={({ item }: { item: ITem }) => {
+          console.log("[DEBUG] Render CollectionHome item:", item);
+          return (
+            <CollectionHome name={item.name} id={item.id} branchId={branchId} />
+          );
+        }}
         HeaderComponent={<HeaderHome onBranchSelect={handleBranchSelect} />}
         StickyElementComponent={<SearchHome />}
         TopListElementComponent={<TopListHome />}

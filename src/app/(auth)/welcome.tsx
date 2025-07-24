@@ -26,27 +26,25 @@ import { Formik } from "formik";
 import ShareInput from "@/components/input/share.input";
 import { CustomerSignInSchema } from "@/utils/validate.schema";
 import Toast from "react-native-root-toast";
-import { customerLoginAPI, forgotPasswordAPI } from "@/utils/api";
+import { customerLoginByPhoneAPI, forgotPasswordAPI } from "@/utils/api";
 
 const WelcomePage = () => {
   const { setAppState } = useCurrentApp();
   const [loading, setLoading] = useState<boolean>(false);
   const [fogotPasword, setFogotPassword] = useState(false);
-  const handleLogin = async (
-    email: string,
-    password: string,
-    resetForm: any
-  ) => {
+  const handleLogin = async (phoneNumber: string, password: string) => {
     try {
       setLoading(true);
-      const res = await customerLoginAPI(email, password);
+      console.log(phoneNumber, password);
+      const res = await customerLoginByPhoneAPI(phoneNumber, password);
       setLoading(false);
-      if (res.data) {
-        await AsyncStorage.setItem("access_token", res.data.token);
-        setAppState(res.data);
+      const accessToken = res.data?.data?.access_token;
+      if (accessToken) {
+        await AsyncStorage.setItem("access_token", accessToken);
+        setAppState(res.data.data);
         router.replace({
           pathname: "/(tabs)",
-          params: { access_token: res.data.token, isLogin: 1 },
+          params: { access_token: accessToken, isLogin: 1 },
         });
       } else {
         setFogotPassword(true);
@@ -67,7 +65,6 @@ const WelcomePage = () => {
         position: -50,
       });
       setFogotPassword(true);
-      resetForm();
       setLoading(false);
     }
   };
@@ -96,9 +93,9 @@ const WelcomePage = () => {
       console.error("Lỗi đăng nhập vân tay:", error);
     }
   };
-  const handleForgotPassword = async (email: string) => {
+  const handleForgotPassword = async (phoneNumber: string) => {
     try {
-      const res = await forgotPasswordAPI(email);
+      const res = await forgotPasswordAPI(phoneNumber);
       if (res.data) {
         Toast.show("Đã gửi email khôi phục mật khẩu", {
           duration: Toast.durations.LONG,
@@ -134,9 +131,9 @@ const WelcomePage = () => {
               <View>
                 <Formik
                   validationSchema={CustomerSignInSchema}
-                  initialValues={{ email: "", password: "" }}
+                  initialValues={{ phoneNumber: "", password: "" }}
                   onSubmit={(values, { resetForm }) =>
-                    handleLogin(values.email, values.password, resetForm)
+                    handleLogin(values.phoneNumber, values.password)
                   }
                 >
                   {({
@@ -149,13 +146,13 @@ const WelcomePage = () => {
                   }) => (
                     <View>
                       <ShareInput
-                        placeholder="Đăng nhập bằng email"
-                        keyboardType="ascii-capable"
-                        onChangeText={handleChange("email")}
-                        onBlur={handleBlur("email")}
-                        value={values.email}
-                        error={errors.email}
-                        touched={touched.email}
+                        placeholder="Số điện thoại"
+                        keyboardType="phone-pad"
+                        onChangeText={handleChange("phoneNumber")}
+                        onBlur={handleBlur("phoneNumber")}
+                        value={values.phoneNumber}
+                        error={errors.phoneNumber}
+                        touched={touched.phoneNumber}
                       />
                       <View style={{ height: 10 }}></View>
                       <ShareInput
@@ -170,7 +167,9 @@ const WelcomePage = () => {
                       {fogotPasword && (
                         <Pressable
                           style={{ alignItems: "center", marginTop: 10 }}
-                          onPress={() => handleForgotPassword(values.email)}
+                          onPress={() =>
+                            handleForgotPassword(values.phoneNumber)
+                          }
                         >
                           <Text
                             style={{
@@ -188,7 +187,9 @@ const WelcomePage = () => {
                       <View style={{ flexDirection: "row" }}>
                         <ShareButton
                           title="Đăng nhập"
-                          onPress={handleSubmit}
+                          onPress={() =>
+                            handleLogin(values.phoneNumber, values.password)
+                          }
                           textStyle={styles.loginBtnText}
                           btnStyle={styles.loginBtn}
                           pressStyle={{ alignSelf: "stretch" }}

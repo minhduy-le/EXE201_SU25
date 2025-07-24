@@ -1,15 +1,13 @@
 import ShareButton from "@/components/button/share.button";
 import ShareInput from "@/components/input/share.input";
-import DateInput from "@/components/input/date.input";
 import { APP_COLOR } from "@/utils/constant";
-import { CustomerSignUpSchema } from "@/utils/validate.schema";
 import { Link, router } from "expo-router";
 import { Formik } from "formik";
 import { Text, View, StyleSheet, Image, Keyboard } from "react-native";
 import Toast from "react-native-root-toast";
 import logo from "@/assets/logo.png";
 import { FONTS } from "@/theme/typography";
-import { customerRegisterAPI } from "@/utils/api";
+import { customerSignUpByPhoneAPI, sendVerifyCodeAPI } from "@/utils/api";
 const styles = StyleSheet.create({
   container: {
     flex: 1,
@@ -18,83 +16,42 @@ const styles = StyleSheet.create({
   itemContainer: {
     marginHorizontal: 30,
     marginTop: 20,
+    paddingVertical: 10,
   },
 });
-const handleSignUp = async (
-  fullName: string,
-  phoneNumber: string,
-  email: string,
-  password: string,
-  date_of_birth: string
-) => {
+const handleSignUp = async (phoneNumber: string, password: string) => {
   try {
-    const signUpResponse = await customerRegisterAPI(
-      fullName,
+    const signUpResponse = await customerSignUpByPhoneAPI(
       phoneNumber,
-      email,
-      password,
-      date_of_birth
+      password
     );
-
-    if (signUpResponse.config.data) {
-      Toast.show("Đăng ký thành công!", {
-        duration: Toast.durations.LONG,
-        position: Toast.positions.BOTTOM,
-        backgroundColor: APP_COLOR.ORANGE,
-      });
-      router.replace({
-        pathname: "/(auth)/verify",
-        params: { email: email },
-      });
-    } else {
-      throw new Error("Đăng ký thất bại. Vui lòng thử lại.");
-    }
+    await sendVerifyCodeAPI(phoneNumber);
+    Toast.show("Đăng ký thành công! Đã gửi mã xác thực.", {
+      duration: Toast.durations.LONG,
+      backgroundColor: APP_COLOR.ORANGE,
+    });
+    router.replace({ pathname: "/(auth)/verify", params: { phoneNumber } });
   } catch (error: any) {
-    console.log(
-      "Lỗi khi tạo mới người dùng:",
-      error.response?.data || error.message
-    );
-    Toast.show(
-      error.response?.data?.message || "Đăng ký thất bại. Vui lòng thử lại.",
-      {
-        duration: Toast.durations.LONG,
-        position: Toast.positions.BOTTOM,
-        backgroundColor: APP_COLOR.CANCEL,
-      }
-    );
+    let errorMessage = "Đăng ký thất bại. Vui lòng thử lại.";
+    if (error.response?.data?.message) {
+      errorMessage = error.response.data.message;
+    } else if (typeof error.response?.data === "string") {
+      errorMessage = error.response.data;
+    }
+    Toast.show(errorMessage, {
+      duration: Toast.durations.LONG,
+      backgroundColor: APP_COLOR.CANCEL,
+    });
   }
 };
 const CustomerSignUpPage = () => {
   return (
     <View style={{ flex: 1, backgroundColor: APP_COLOR.BACKGROUND_ORANGE }}>
       <Formik
-        validationSchema={CustomerSignUpSchema}
-        initialValues={{
-          fullName: "",
-          phoneNumber: "",
-          email: "",
-          date_of_birth: "",
-          password: "",
-          confirmPassword: "",
-        }}
-        onSubmit={(values) => {
-          handleSignUp(
-            values.fullName,
-            values.phoneNumber,
-            values.email,
-            values.password,
-            values.date_of_birth
-          );
-        }}
+        initialValues={{ phoneNumber: "", password: "", confirmPassword: "" }}
+        onSubmit={(values) => handleSignUp(values.phoneNumber, values.password)}
       >
-        {({
-          handleChange,
-          handleBlur,
-          handleSubmit,
-          values,
-          errors,
-          touched,
-        }) => (
+        {({ handleChange, handleBlur, values, errors, touched }) => (
           <View style={styles.container}>
             <View style={styles.itemContainer}>
               <Image
@@ -111,16 +68,7 @@ const CustomerSignUpPage = () => {
               >
                 Trở thành khách hàng của Tấm Tắc
               </Text>
-              <View style={{ gap: 15 }}>
-                <ShareInput
-                  placeholder="Tên của bạn"
-                  placeholderTextColor={APP_COLOR.BROWN}
-                  onChangeText={handleChange("fullName")}
-                  onBlur={handleBlur("fullName")}
-                  value={values.fullName}
-                  error={errors.fullName}
-                  touched={touched.fullName}
-                />
+              <View style={{ gap: 10 }}>
                 <ShareInput
                   placeholder="Số điện thoại"
                   placeholderTextColor={APP_COLOR.BROWN}
@@ -131,24 +79,7 @@ const CustomerSignUpPage = () => {
                   touched={touched.phoneNumber}
                 />
                 <ShareInput
-                  placeholder="Email"
-                  placeholderTextColor={APP_COLOR.BROWN}
-                  onChangeText={handleChange("email")}
-                  onBlur={handleBlur("email")}
-                  value={values.email}
-                  error={errors.email}
-                  touched={touched.email}
-                />
-                <DateInput
-                  placeholder="Nhập ngày sinh của bạn"
-                  onChangeText={handleChange("date_of_birth")}
-                  onBlur={handleBlur("date_of_birth")}
-                  value={values.date_of_birth}
-                  error={errors.date_of_birth}
-                  touched={touched.date_of_birth}
-                />
-                <ShareInput
-                  placeholder="Nhập mật khẩu"
+                  placeholder="Mật khẩu"
                   placeholderTextColor={APP_COLOR.BROWN}
                   onChangeText={handleChange("password")}
                   onBlur={handleBlur("password")}
@@ -169,40 +100,9 @@ const CustomerSignUpPage = () => {
                 />
               </View>
             </View>
-
-            <View
-              style={{
-                marginVertical: 15,
-                flexDirection: "row",
-                gap: 10,
-                justifyContent: "center",
-              }}
-            >
-              <Text
-                style={{
-                  color: "black",
-                  fontFamily: FONTS.regular,
-                  fontSize: 17,
-                }}
-              >
-                Đã có tài khoản?
-              </Text>
-              <Link href={"/(auth)/welcome"}>
-                <Text
-                  style={{
-                    color: APP_COLOR.ORANGE,
-                    textDecorationLine: "underline",
-                    fontFamily: FONTS.regular,
-                    fontSize: 17,
-                  }}
-                >
-                  Đăng nhập.
-                </Text>
-              </Link>
-            </View>
             <ShareButton
               title="Đăng Ký với Khách"
-              onPress={handleSubmit}
+              onPress={() => handleSignUp(values.phoneNumber, values.password)}
               textStyle={{
                 textTransform: "uppercase",
                 color: APP_COLOR.WHITE,

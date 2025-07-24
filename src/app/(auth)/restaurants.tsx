@@ -26,6 +26,7 @@ import axios from "axios";
 import { FONTS } from "@/theme/typography";
 import Animated, { FadeIn, SlideInDown } from "react-native-reanimated";
 import Toast from "react-native-root-toast";
+import { getProductsByKeywordAPI } from "@/utils/api";
 const RestaurantsPage = () => {
   const [restaurants, setRestaurants] = useState<IRestaurants[]>([]);
   const [searchTerm, setSearchTerm] = useState<string>("");
@@ -33,6 +34,7 @@ const RestaurantsPage = () => {
   const { cart, setCart, restaurant, appState } = useCurrentApp();
   const { branchId, setBranchId } = useCurrentApp();
   const [showCart, setShowCart] = useState(false);
+  const [searchResults, setSearchResults] = useState<any[]>([]);
   const fetchProducts = useCallback(
     debounce(async (id: string) => {
       try {
@@ -69,9 +71,27 @@ const RestaurantsPage = () => {
       setRestaurants([]);
     }
   }, 300);
-  const handleChangeText = (text: string) => {
+  const handleChangeText = async (text: string) => {
     setSearchTerm(text);
-    handleSearch(text);
+    if (text.trim().length === 0) {
+      if (id) fetchProducts(id as string);
+      return;
+    }
+    try {
+      const res = await getProductsByKeywordAPI(text);
+      const products = res.data.data.content.map((item: any) => ({
+        productId: item.productId,
+        name: item.productName,
+        image: item.productImage,
+        description: item.productDescription,
+        price: item.productPrice,
+        ProductType: { name: item.productType },
+      }));
+      setRestaurants(products);
+    } catch (error) {
+      setRestaurants([]);
+      console.error("Lỗi khi tìm kiếm sản phẩm:", error);
+    }
   };
   useEffect(() => {
     if (id) {
@@ -168,6 +188,119 @@ const RestaurantsPage = () => {
             paddingLeft: 5,
           }}
         />
+        {/* XÓA FlatList searchResults, chỉ giữ FlatList restaurants như cũ */}
+        {restaurants[0]?.productType && (
+          <FlatList
+            data={restaurants}
+            keyExtractor={(item) => item.productId}
+            renderItem={({ item }) => {
+              const quantity = getItemQuantity(item.productId);
+              return (
+                <View
+                  style={{
+                    flexDirection: "row",
+                    alignItems: "center",
+                    backgroundColor: APP_COLOR.WHITE,
+                    marginBottom: 15,
+                    width: "85%",
+                    marginHorizontal: "auto",
+                    borderRadius: 10,
+                  }}
+                >
+                  <View style={{ flexDirection: "row", gap: 10 }}>
+                    <Image
+                      src={item.image}
+                      style={{
+                        height: 100,
+                        width: 100,
+                        borderTopLeftRadius: 10,
+                        borderBottomLeftRadius: 10,
+                      }}
+                    />
+                    <View style={{ flex: 1 }}>
+                      <Text
+                        style={{
+                          fontFamily: FONTS.regular,
+                          color: APP_COLOR.BROWN,
+                          fontSize: 17,
+                          marginTop: 5,
+                        }}
+                      >
+                        {item.description}
+                      </Text>
+                      <Text
+                        style={{
+                          color: APP_COLOR.BROWN,
+                          fontFamily: FONTS.bold,
+                          fontSize: 17,
+                        }}
+                      >
+                        {currencyFormatter(item.price)}
+                      </Text>
+                    </View>
+                  </View>
+                  <View
+                    style={{
+                      flexDirection: "row",
+                      alignItems: "center",
+                      gap: 5,
+                      position: "absolute",
+                      bottom: 5,
+                      right: 10,
+                      borderWidth: 0.5,
+                      borderColor: APP_COLOR.BROWN,
+                      paddingHorizontal: 5,
+                      paddingVertical: 3,
+                      borderRadius: 50,
+                    }}
+                  >
+                    <Pressable
+                      onPress={() => handleQuantityChange(item, "MINUS")}
+                      style={({ pressed }) => ({
+                        opacity: quantity > 0 ? (pressed ? 0.5 : 1) : 0.3,
+                      })}
+                      disabled={quantity === 0}
+                    >
+                      <AntDesign
+                        name="minuscircle"
+                        size={24}
+                        color={
+                          quantity > 0
+                            ? APP_COLOR.BUTTON_YELLOW
+                            : APP_COLOR.BROWN
+                        }
+                      />
+                    </Pressable>
+
+                    <Text
+                      style={{
+                        minWidth: 25,
+                        textAlign: "center",
+                        fontFamily: FONTS.medium,
+                        color: APP_COLOR.BROWN,
+                      }}
+                    >
+                      {quantity}
+                    </Text>
+
+                    <Pressable
+                      onPress={() => handleQuantityChange(item, "PLUS")}
+                      style={({ pressed }) => ({
+                        opacity: pressed ? 0.5 : 1,
+                      })}
+                    >
+                      <AntDesign
+                        name="pluscircle"
+                        size={24}
+                        color={APP_COLOR.BUTTON_YELLOW}
+                      />
+                    </Pressable>
+                  </View>
+                </View>
+              );
+            }}
+          />
+        )}
         {appState?.token ? (
           <Pressable
             style={styles.cartButton}

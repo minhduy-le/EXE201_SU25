@@ -2,21 +2,29 @@ import axios from "axios";
 import { Platform } from "react-native";
 import { API_URL } from "./constant";
 
-export const customerRegisterAPI = (
+export const customerRegisterAPI = async (
   fullName: string,
   phone_number: string,
   email: string,
   password: string,
   date_of_birth: string
 ) => {
-  const url = `${API_URL}/api/auth/register`;
-  return axios.post(url, {
-    fullName,
-    email,
-    phone_number,
-    password,
-    date_of_birth,
-  });
+  return axios.post(
+    `${API_URL}/api/auth/register`,
+    {
+      fullName,
+      phone_number,
+      email,
+      password,
+      date_of_birth,
+    },
+    {
+      headers: {
+        accept: "application/json",
+        "Content-Type": "application/json",
+      },
+    }
+  );
 };
 export const verifyEmailCustomer = (email: string, otp: string) => {
   const url = `${API_URL}/api/auth/verify-otp`;
@@ -47,7 +55,7 @@ export const getBestSellerAPI = () => {
   return axios.get(url);
 };
 export const getTypeProductAPI = () => {
-  const url = `${API_URL}/api/product-types`;
+  const url = `${API_URL}/product-type`;
   return axios.get(url);
 };
 export const getAccountAPI = () => {
@@ -133,4 +141,48 @@ export const requestPasswordAPI = (email: string) => {
 export const likeRestaurantAPI = (restaurant: string, quantity: number) => {
   const url = `/api/v1/likes`;
   return axios.post<IBackendRes<IUserLogin>>(url, { restaurant, quantity });
+};
+
+export const customerLoginByPhoneAPI = (
+  phoneNumber: string,
+  password: string
+) => {
+  const url = `${API_URL}/customer/sign-in`;
+  return axios.post(url, { phoneNumber, password });
+};
+
+export const customerSignUpByPhoneAPI = (
+  phoneNumber: string,
+  password: string
+) => {
+  const url = `${API_URL}/customer/sign-up`;
+  return axios.post(url, { phoneNumber, password });
+};
+
+export const sendVerifyCodeAPI = (phoneNumber: string) => {
+  const url = `${API_URL}/verify-code/send?mode=%20`;
+  return axios.post(url, { phoneNumber });
+};
+
+export const verifyCodeAPI = (phoneNumber: string, code: string) => {
+  const url = `${API_URL}/verify-code/verify?phoneNumber=${encodeURIComponent(
+    phoneNumber
+  )}&code=${encodeURIComponent(code)}`;
+  return axios.post(url);
+};
+
+export const getProductsByTypeAPI = (typeId: number, page = 0, size = 10) => {
+  const url = `${API_URL}/products?page=${page}&size=${size}&typeId=${typeId}`;
+  return axios.get(url);
+};
+
+export const getProductsByKeywordAPI = (
+  keyword: string,
+  page = 0,
+  size = 10
+) => {
+  const url = `${API_URL}/products?page=${page}&size=${size}&keyword=${encodeURIComponent(
+    keyword
+  )}`;
+  return axios.get(url);
 };

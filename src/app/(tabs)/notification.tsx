@@ -30,7 +30,7 @@ const Notification = () => {
                 color={APP_COLOR.WHITE}
               />
               <View style={{ position: "absolute", top: -5, right: 0 }}>
-                <BlinkingBadge count={3} />
+                <BlinkingBadge count={1} />
               </View>
             </View>
             <View>
@@ -50,7 +50,7 @@ const Notification = () => {
                   fontFamily: FONTS.regular,
                 }}
               >
-                Bạn có 3 thông báo mới
+                Bạn có 1 thông báo mới
               </Text>
             </View>
           </View>
