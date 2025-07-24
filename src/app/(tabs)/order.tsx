@@ -23,14 +23,42 @@ import AsyncStorage from "@react-native-async-storage/async-storage";
 import { router, useFocusEffect } from "expo-router";
 import MaterialCommunityIcons from "@expo/vector-icons/MaterialCommunityIcons";
 import { formatDateToDDMMYYYY } from "@/utils/function";
+import { getOrderHistoryByCustomerAPI } from "@/utils/api";
 interface IOrderHistoryCus {
-  orderId: number;
-  order_create_at: string;
-  payment_method: string;
-  status: string;
-  order_address: string;
-  order_point_earn: number;
-  order_amount: number;
+  id: number;
+  subTotal: number;
+  promotionCode: string | null;
+  discountValue: number;
+  discountPercent: number;
+  amount: number;
+  shippingFee: number;
+  isPickUp: boolean;
+  delivery_at: string | null;
+  orderStatus: string;
+  note: string;
+  payment_code: string | null;
+  address: string | null;
+  phone: string;
+  pointUsed: number;
+  pointEarned: number;
+  createdAt: string;
+  orderItems: Array<{
+    productId: number;
+    productName: string;
+    orderId: number;
+    quantity: number;
+    price: number;
+    note: string;
+    feedback: any;
+    feedbackPoint: number;
+    expiredFeedbackTime: string | null;
+    productImg: string;
+    feedBackYet: boolean;
+  }>;
+  customerDTO: any;
+  pickupTime: string;
+  customerName: string | null;
+  status: string | null;
 }
 interface StatusInfo {
   text: string;
@@ -72,13 +100,9 @@ const OrderPage = () => {
         setToken(token);
         const decoded: any = jwtDecode(token);
         setDecodeToken(decoded.id);
-        const res = await axios.get(`${API_URL}/api/orders/user`, {
-          headers: {
-            Authorization: `Bearer ${token}`,
-          },
-        });
-        if (res?.data) {
-          setOrderHistory(res.data);
+        const res = await getOrderHistoryByCustomerAPI(decoded.id, token);
+        if (res?.data?.data?.content) {
+          setOrderHistory(res.data.data.content);
         }
       }
     } catch (error) {
@@ -133,7 +157,7 @@ const OrderPage = () => {
             );
             setOrderHistory((prev) =>
               prev.map((order) =>
-                order.orderId === id ? { ...order, status: "Canceled" } : order
+                order.id === id ? { ...order, status: "Canceled" } : order
               )
             );
             Alert.alert("Thành công", "Đơn hàng đã được hủy");
@@ -239,7 +263,7 @@ const OrderPage = () => {
               </Text>
             ) : (
               orderHistory.map((item, index) => (
-                <View key={item.orderId}>
+                <View key={item.id}>
                   <View
                     style={{
                       padding: 10,
@@ -270,23 +294,14 @@ const OrderPage = () => {
                             justifyContent: "space-between",
                           }}
                         >
-                          <Text style={styles.orderText}>#{item.orderId}</Text>
-                          <Text
-                            style={{
-                              color: APP_COLOR.BROWN,
-                              fontSize: 15,
-                              fontFamily: FONTS.medium,
-                            }}
-                          >
-                            {item.payment_method}
-                          </Text>
+                          <Text style={styles.orderText}>#{item.id}</Text>
                         </View>
                         <Text style={styles.orderText}>
-                          {formatDateToDDMMYYYY(item.order_create_at)}
+                          {formatDateToDDMMYYYY(item.createdAt)}
                         </Text>
                       </View>
                       <View>
-                        <StatusBadge status={item.status} />
+                        <StatusBadge status={item.orderStatus || ""} />
                         <View>
                           <View
                             style={{
@@ -295,35 +310,68 @@ const OrderPage = () => {
                               marginTop: 5,
                             }}
                           >
-                            <Text style={[styles.text, { width: 230 }]}>
-                              {item.order_address}
-                            </Text>
                             <Text
                               style={[styles.text, { color: APP_COLOR.ORANGE }]}
                             >
-                              +{item.order_point_earn} điểm
+                              +{item.pointEarned} điểm
                             </Text>
                           </View>
-                          <View
-                            style={{
-                              flexDirection: "row",
-                              alignItems: "center",
-                              justifyContent: "space-between",
-                            }}
-                          >
-                            <Text style={styles.text}>X1 Sản phẩm</Text>
+                          <View style={{ gap: 5 }}>
+                            <Text style={styles.text}>SĐT: {item.phone}</Text>
                             <Text
-                              style={[
-                                styles.text,
-                                {
-                                  fontSize: 20,
-                                  fontFamily: FONTS.bold,
-                                  alignSelf: "flex-end",
-                                },
-                              ]}
+                              style={[styles.text, { color: APP_COLOR.BROWN }]}
                             >
-                              {currencyFormatter(item.order_amount)}
+                              Ghi chú: {item.note}
                             </Text>
+                          </View>
+                          <View style={{ marginTop: 5 }}>
+                            {item.orderItems.map((orderItem, idx) => (
+                              <View
+                                key={orderItem.productId}
+                                style={{
+                                  flexDirection: "row",
+                                  alignItems: "center",
+                                  marginBottom: 4,
+                                }}
+                              >
+                                <Image
+                                  source={{ uri: orderItem.productImg }}
+                                  style={{
+                                    width: 40,
+                                    height: 40,
+                                    borderRadius: 6,
+                                    marginRight: 8,
+                                  }}
+                                />
+                                <View style={{ flex: 1 }}>
+                                  <Text
+                                    style={{
+                                      fontFamily: FONTS.bold,
+                                      color: APP_COLOR.BROWN,
+                                    }}
+                                  >
+                                    {orderItem.productName} x{" "}
+                                    {orderItem.quantity}
+                                  </Text>
+                                  <Text
+                                    style={{
+                                      color: APP_COLOR.BROWN,
+                                      fontSize: 13,
+                                    }}
+                                  >
+                                    Ghi chú: {orderItem.note}
+                                  </Text>
+                                </View>
+                                <Text
+                                  style={{
+                                    color: APP_COLOR.ORANGE,
+                                    fontWeight: "bold",
+                                  }}
+                                >
+                                  {currencyFormatter(orderItem.price)}
+                                </Text>
+                              </View>
+                            ))}
                           </View>
                         </View>
                       </View>
@@ -333,7 +381,7 @@ const OrderPage = () => {
                         <View style={styles.container}>
                           <TouchableOpacity
                             style={styles.button}
-                            onPress={() => handleViewDetails(item.orderId)}
+                            onPress={() => handleViewDetails(item.id)}
                           >
                             <Text style={styles.buttonText}>Xem chi tiết</Text>
                           </TouchableOpacity>
@@ -343,7 +391,7 @@ const OrderPage = () => {
                                 styles.button,
                                 { backgroundColor: APP_COLOR.ORANGE },
                               ]}
-                              onPress={() => handleFeedback(item.orderId)}
+                              onPress={() => handleFeedback(item.id)}
                             >
                               <Text
                                 style={[
@@ -355,13 +403,13 @@ const OrderPage = () => {
                               </Text>
                             </TouchableOpacity>
                           )}
-                          {["Paid", "Pending"].includes(item.status) && (
+                          {["Paid", "Pending"].includes(item.orderStatus) && (
                             <TouchableOpacity
                               style={[
                                 styles.button,
                                 { backgroundColor: APP_COLOR.ORANGE },
                               ]}
-                              onPress={() => handleCancelOrder(item.orderId)}
+                              onPress={() => handleCancelOrder(item.id)}
                             >
                               <Text
                                 style={[

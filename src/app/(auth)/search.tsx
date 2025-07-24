@@ -20,6 +20,7 @@ import { useCurrentApp } from "@/context/app.context";
 import { currencyFormatter } from "@/utils/api";
 import { getItemQuantity as getItemQuantityUtil } from "@/utils/cart";
 import Toast from "react-native-root-toast";
+import { getProductsByKeywordAPI } from "@/utils/api";
 
 interface IProduct {
   productId: string;
@@ -46,32 +47,35 @@ const SearchPage = () => {
         return;
       }
       try {
-        const res = await axios.get(
-          `${API_URL}/api/products/search?name=${text}`
+        const res = await getProductsByKeywordAPI(text);
+        const content = res.data.data.content;
+        const sortedProducts = content.sort((a: any, b: any) =>
+          (a.productType || "").localeCompare(b.productType || "")
         );
-        if (res.data?.products) {
-          const sortedProducts = res.data.products.sort(
-            (a: IProduct, b: IProduct) =>
-              a.ProductType.name.localeCompare(b.ProductType.name)
-          );
-          const products: IProduct[] = sortedProducts;
-          const productType: number[] = [
-            ...new Set(
-              products.map(
-                (product: IProduct) => product.ProductType.productTypeId
-              )
-            ),
-          ];
-          setProductTypeList(productType);
-          setProducts(sortedProducts);
-        } else {
-          setProducts([]);
-          setProductTypeList([]);
-        }
+        const products: IProduct[] = sortedProducts.map((item: any) => ({
+          productId: item.productId,
+          description: item.productDescription,
+          price: item.productPrice,
+          image: item.productImage,
+          name: item.productName,
+          ProductType: {
+            name: item.productType,
+            productTypeId: item.productTypeId || 0,
+          },
+        }));
+        const productType: number[] = [
+          ...new Set(
+            products.map(
+              (product: IProduct) => product.ProductType.productTypeId
+            )
+          ),
+        ];
+        setProductTypeList(productType);
+        setProducts(products);
       } catch (error) {
-        console.error("Error fetching search results:", error);
         setProducts([]);
         setProductTypeList([]);
+        console.error("Error fetching search results:", error);
       }
     }, 500),
     []

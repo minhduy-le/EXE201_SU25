@@ -2,9 +2,8 @@ import { useCurrentApp } from "@/context/app.context";
 import { FONTS } from "@/theme/typography";
 import { jwtDecode } from "jwt-decode";
 import { currencyFormatter } from "@/utils/api";
-import { calculateTotalPrice } from "@/utils/cart";
-import { APP_COLOR, API_URL } from "@/utils/constant";
-import { router } from "expo-router";
+import { API_URL, APP_COLOR, BASE_URL } from "@/utils/constant";
+import { router, useLocalSearchParams } from "expo-router";
 import { useEffect, useState, useCallback } from "react";
 import {
   Image,
@@ -17,7 +16,6 @@ import {
   Platform,
   TextInput,
   FlatList,
-  WebView,
 } from "react-native";
 import Toast from "react-native-root-toast";
 import AsyncStorage from "@react-native-async-storage/async-storage";
@@ -29,6 +27,7 @@ import ShareButton from "@/components/button/share.button";
 import * as Linking from "expo-linking";
 import * as WebBrowser from "expo-web-browser";
 import { SafeAreaView } from "react-native-safe-area-context";
+import Feather from "@expo/vector-icons/Feather";
 import logo from "@/assets/logo.png";
 
 interface IOrderItem {
@@ -48,7 +47,6 @@ interface ICusInfor {
 interface IDetails {
   productId: number;
   quantity: number;
-  price: number;
 }
 const PlaceOrderPage = () => {
   const { restaurant, cart, setCart, locationReal } = useCurrentApp();
@@ -60,13 +58,31 @@ const PlaceOrderPage = () => {
   const [cusPhone, setCusPhone] = useState();
   const { branchId } = useCurrentApp();
   const [selectedOption, setSelectedOption] = useState<string | null>(null);
-  const [shippingFee, setShippingFee] = useState<number>(0);
   const dropdownItems = [
     { id: "1", title: "COD" },
-    { id: "4", title: "PAYOS" },
+    { id: "2", title: "PAYOS" },
   ];
-  const [addresses, setAddresses] = useState<string[]>([]);
-  const [selectedAddress, setSelectedAddress] = useState<string>("");
+  const [addresses, setAddresses] = useState<ICusInfor[]>([
+    {
+      userId: 1,
+      fullName: "Home",
+      address: "Hồ Chí Minh, Việt Nam",
+      phone: "0889679561",
+    },
+    {
+      userId: 2,
+      fullName: "Office",
+      address: "Hà Nội, Việt Nam",
+      phone: "0889679561",
+    },
+    {
+      userId: 3,
+      fullName: "Friend's Place",
+      address: "Đà Nẵng, Việt Nam",
+      phone: "0889679561",
+    },
+  ]);
+  const [selectedAddress, setSelectedAddress] = useState<any>(null);
   const [orderDetails, setOrderDetails] = useState<
     { productId: number; quantity: number }[]
   >([]);
@@ -74,23 +90,58 @@ const PlaceOrderPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [addressSuggestions, setAddressSuggestions] = useState<any[]>([]);
   const [showSuggestions, setShowSuggestions] = useState(false);
-  const [discountAmount, setDiscountAmount] = useState<number>(0);
+  const [selectedAddressObj, setSelectedAddressObj] = useState<any>(null);
+
+  const GOOGLE_API_KEY = "AIzaSyAwSwTDdF00hbh21k7LsX-4Htuwqm9MlPg";
+
+  const debounce = <T extends (...args: any[]) => any>(
+    func: T,
+    waitFor: number
+  ) => {
+    let timeout: any;
+    return (...args: Parameters<T>): Promise<ReturnType<T>> =>
+      new Promise((resolve) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => resolve(func(...args)), waitFor);
+      });
+  };
+
+  const handleSearch = useCallback(
+    debounce(async (text: string) => {
+      setSearchTerm(text);
+      if (!text) return;
+      try {
+        const res = await axios.get(
+          `https://maps.googleapis.com/maps/api/place/queryautocomplete/json?input=${text}&language=vi&key=${GOOGLE_API_KEY}`
+        );
+        if (res.data) {
+          setAddressSuggestions(res.data.predictions);
+        }
+      } catch (e) {
+        setAddressSuggestions([]);
+      }
+    }, 500),
+    []
+  );
+
   const handleCreateOrder = async (
-    orderItems: any,
-    order_discount_value: number,
-    promotion_code: string,
-    order_shipping_fee: number,
-    payment_method_id: number,
-    order_address: string,
-    note: string,
-    isDatHo: boolean,
-    tenNguoiDatHo: string,
-    soDienThoaiNguoiDatHo: string,
-    customerId: number | string,
-    platform: string = "app"
+    _promotionCode: string,
+    _note: string,
+    _address: string,
+    _phoneNumber: string,
+    _branchId: number,
+    _pointUsed: number,
+    _pointEarned: number,
+    _paymentMethodId: number,
+    _orderItems: any,
+    _pickUp: boolean,
+    _customerName?: string,
+    _pickupTime?: string,
+    _customerEmail?: string
   ) => {
     try {
-      if (!customerId) {
+      const token = await AsyncStorage.getItem("access_token");
+      if (!decodeToken) {
         Toast.show("Vui lòng đăng nhập để đặt hàng!", {
           duration: Toast.durations.LONG,
           textColor: "white",
@@ -99,67 +150,50 @@ const PlaceOrderPage = () => {
         });
         return;
       }
-      const token = await AsyncStorage.getItem("access_token");
-      const response = await axios.post(
-        `${API_URL}/api/orders/`,
-        {
-          orderItems,
-          order_discount_value,
-          promotion_code,
-          order_shipping_fee,
-          payment_method_id,
-          order_address,
-          platform,
-          note,
-          isDatHo,
-          tenNguoiDatHo,
-          soDienThoaiNguoiDatHo,
-          customerId,
+      const payload = {
+        customerId: decodeToken,
+        customerName: _customerName || "",
+        promotionCode: "",
+        note: _note,
+        address: _address,
+        phoneNumber: _phoneNumber,
+        branchId: 1,
+        pointUsed: 0,
+        pointEarned: 0,
+        paymentMethodId: 2,
+        longitude: "",
+        latitude: "",
+        orderItems: _orderItems,
+        pickupTime: _pickupTime || new Date().toISOString(),
+        customerEmail: _customerEmail || "",
+        pickUp: _pickUp,
+      };
+      const response = await axios.post(`${API_URL}/orders/`, payload, {
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
+      });
       if (response.data) {
-        if (response.data.checkoutUrl) {
+        const paymentUrl = response.data.data?.payment_url;
+        if (paymentUrl) {
           router.push({
             pathname: "/(user)/product/checkout.webview",
-            params: { url: response.data.checkoutUrl },
+            params: { url: paymentUrl },
           });
           return;
         }
-        if (payment_method_id === 2 && response.data.data?.payment_url) {
-          const link = response.data.data.payment_url;
-          try {
-            await WebBrowser.openBrowserAsync(link);
-          } catch (error) {
-            console.error("Error opening payment URL:", error);
-            Toast.show("Không thể mở trang thanh toán!", {
-              duration: Toast.durations.LONG,
-              textColor: "white",
-              backgroundColor: "red",
-              opacity: 1,
-            });
-          }
-        } else {
-          Toast.show("Đặt hàng thành công!", {
-            duration: Toast.durations.LONG,
-            textColor: "white",
-            backgroundColor: APP_COLOR.ORANGE,
-            opacity: 1,
-          });
-          setCart(0);
-          router.navigate("/(auth)/order.success");
-        }
+        Toast.show("Đặt hàng thành công!", {
+          duration: Toast.durations.LONG,
+          textColor: "white",
+          backgroundColor: APP_COLOR.ORANGE,
+          opacity: 1,
+        });
+        setCart(0);
+        router.replace("/(tabs)");
       }
     } catch (error) {
-      console.error("Error creating order:", error);
-
       if (axios.isAxiosError(error) && error.response) {
+        console.log("[DEBUG] error.response.data:", error.response.data);
         const errorMessage =
           error.response.data.message || "Có lỗi xảy ra khi đặt hàng!";
         Toast.show(errorMessage, {
@@ -179,114 +213,6 @@ const PlaceOrderPage = () => {
     }
   };
 
-  let timeout: any;
-  const debounce = <T extends (...args: any[]) => any>(
-    func: T,
-    waitFor: number
-  ) => {
-    return (...args: Parameters<T>): Promise<ReturnType<T>> =>
-      new Promise((resolve) => {
-        clearTimeout(timeout);
-        timeout = setTimeout(() => resolve(func(...args)), waitFor);
-      });
-  };
-
-  const handleSearch = useCallback(
-    debounce(async (text: string) => {
-      setSearchTerm(text);
-      if (!text) return;
-      try {
-        const res = await axios.get(
-          `https://maps.googleapis.com/maps/api/place/queryautocomplete/json?input=${text}&language=vi&key=AIzaSyAwSwTDdF00hbh21k7LsX-4Htuwqm9MlPg`
-        );
-        if (res.data) {
-          setAddressSuggestions(res.data.predictions);
-        }
-      } catch (e) {
-        console.log("Google API error:", e);
-      }
-    }, 500),
-    []
-  );
-
-  const handleSelectAddressAuto = async (address: string) => {
-    const cleanedAddress = address.replace(/,\s*Việt Nam$/, "");
-    setSearchTerm(cleanedAddress);
-    setAddressSuggestions([]);
-    setSelectedAddress(cleanedAddress);
-    setShowSuggestions(false);
-    try {
-      const token = await AsyncStorage.getItem("access_token");
-      const res = await axios.post(
-        "https://wdp301-su25.space/api/orders/shipping/calculate",
-        {
-          deliver_address: cleanedAddress,
-          weight: 1000,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (res.data && res.data.fee) {
-        setShippingFee(res.data.fee);
-      }
-    } catch (e) {
-      setShippingFee(0);
-    }
-    Toast.show(`Đã chọn địa chỉ: ${cleanedAddress}`, {
-      duration: Toast.durations.LONG,
-      textColor: "white",
-      backgroundColor: APP_COLOR.ORANGE,
-      opacity: 1,
-    });
-  };
-
-  const handleSelectAddress = async (address: string) => {
-    const cleanedAddress = address.replace(/,\s*Việt Nam$/, "");
-    setSelectedAddress(cleanedAddress);
-    setModalVisible(false);
-    try {
-      const token = await AsyncStorage.getItem("access_token");
-      const res = await axios.post(
-        "https://wdp301-su25.space/api/orders/shipping/calculate",
-        {
-          deliver_address: cleanedAddress,
-          weight: 1000,
-        },
-        {
-          headers: {
-            Authorization: `Bearer ${token}`,
-            accept: "application/json",
-            "Content-Type": "application/json",
-          },
-        }
-      );
-      if (res.data && res.data.fee) {
-        setShippingFee(res.data.fee);
-      }
-    } catch (e) {
-      setShippingFee(0);
-    }
-    Toast.show(`Đã chọn địa chỉ: ${cleanedAddress}`, {
-      duration: Toast.durations.LONG,
-      textColor: "white",
-      backgroundColor: APP_COLOR.ORANGE,
-      opacity: 1,
-    });
-  };
-
-  const handlePaymentMethodChange = (
-    value: string,
-    setFieldValue: (field: string, value: any) => void
-  ) => {
-    setSelectedOption(value);
-    setFieldValue("paymentMethodId", Number(value));
-  };
-
   useEffect(() => {
     const getAccessToken = async () => {
       try {
@@ -304,28 +230,30 @@ const PlaceOrderPage = () => {
     getAccessToken();
   }, []);
   useEffect(() => {
-    const fetchAddresses = async () => {
+    const fetchData = async () => {
       try {
-        const token = await AsyncStorage.getItem("access_token");
-        if (!token) return;
-        const res = await axios.get(
-          "https://wdp301-su25.space/api/location/addresses/user",
-          {
-            headers: {
-              Authorization: `Bearer ${token}`,
-              accept: "application/json",
-            },
-          }
+        const resDefault = await axios.get(
+          `${BASE_URL}/information/default?customerId=${decodeToken}`
         );
-        if (res.data && res.data.data) {
-          setAddresses(res.data.data);
+        setSelectedAddress(resDefault.data.data);
+        setCusAddress(resDefault.data.data.address);
+        setCusPhone(resDefault.data.data.phone);
+        const resAddresses = await axios.get(
+          `${BASE_URL}/information/${decodeToken}`
+        );
+        if (resAddresses.data.data) {
+          setAddresses(resAddresses.data.data);
         }
       } catch (error) {
-        console.error("Error fetching addresses:", error);
+        console.error("Error fetching data:", error);
       }
     };
-    fetchAddresses();
-  }, []);
+
+    if (decodeToken) {
+      fetchData();
+    }
+  }, [decodeToken]);
+
   useEffect(() => {
     if (cart && restaurant && restaurant._id) {
       const result = [];
@@ -335,13 +263,18 @@ const PlaceOrderPage = () => {
       )) {
         if (currentItems.extra) {
           for (const [key, value] of Object.entries(currentItems.extra)) {
+            const option = currentItems.data.options?.find(
+              (item) => `${item.title}-${item.description}` === key
+            );
+            const addPrice = option?.additionalPrice ?? 0;
             result.push({
               image: currentItems.data.image,
               title: currentItems.data.name,
               option: key,
-              price: currentItems.data.price,
+              price: currentItems.data.price + addPrice,
               quantity: value,
               productId: Number(currentItems.data.productId),
+              note: "", // thêm note mặc định
             });
           }
         } else {
@@ -352,13 +285,14 @@ const PlaceOrderPage = () => {
             price: currentItems.data.price,
             quantity: currentItems.quantity,
             productId: Number(currentItems.data.productId),
+            note: "", // thêm note mặc định
           });
         }
 
         details.push({
           productId: Number(currentItems.data.productId),
           quantity: currentItems.quantity,
-          price: currentItems.data.price,
+          note: "", // thêm note mặc định
         });
       }
       setOrderItems(result);
@@ -397,6 +331,41 @@ const PlaceOrderPage = () => {
       subscription.remove();
     };
   }, []);
+  const handlePaymentMethodChange = (
+    value: string,
+    setFieldValue: (field: string, value: any) => void
+  ) => {
+    setSelectedOption(value);
+    setFieldValue("paymentMethodId", Number(value));
+  };
+  const calculateTotalPrice = () => {
+    try {
+      if (!restaurant?._id) {
+        return 0;
+      }
+      const restaurantCart = cart[restaurant._id];
+      if (!restaurantCart || !restaurantCart.items) {
+        return 0;
+      }
+      const items = restaurantCart.items;
+      let total = 0;
+
+      Object.values(items).forEach((item: any) => {
+        const price = Number(
+          item?.data?.price ||
+            item?.data?.basePrice ||
+            item?.data?.productPrice ||
+            0
+        );
+        const quantity = Number(item?.quantity || 0);
+        total += price * quantity;
+      });
+      return total;
+    } catch (error) {
+      console.error("Lỗi tính tổng giá:", error);
+      return 0;
+    }
+  };
 
   return (
     <SafeAreaView
@@ -419,6 +388,7 @@ const PlaceOrderPage = () => {
             flexDirection: "row",
             justifyContent: "space-between",
             position: "relative",
+            top: -5,
           }}
         >
           <Text
@@ -433,141 +403,15 @@ const PlaceOrderPage = () => {
             Giao hàng
           </Text>
         </View>
-        <View
-          style={{
-            position: "relative",
-            minWidth: 200,
-            flex: 1,
-          }}
-        >
-          <TextInput
-            placeholder="Nhập địa chỉ của bạn"
-            value={searchTerm}
-            onFocus={() => setShowSuggestions(true)}
-            onChangeText={(text) => {
-              setSearchTerm(text);
-              handleSearch(text);
-              setShowSuggestions(true);
-            }}
-            style={{
-              borderWidth: 1,
-              borderColor: APP_COLOR.BROWN,
-              borderRadius: 10,
-              paddingVertical: 10,
-              color: APP_COLOR.BROWN,
-              backgroundColor: APP_COLOR.BACKGROUND_ORANGE,
-              marginVertical: 10,
-              minWidth: 200,
-            }}
-            placeholderTextColor={APP_COLOR.BROWN}
-          />
-          {showSuggestions && addressSuggestions.length > 0 && (
-            <View
-              style={{
-                position: "absolute",
-                top: 50,
-                left: 0,
-                right: 0,
-                backgroundColor: APP_COLOR.WHITE,
-                borderWidth: 1,
-                borderColor: "#ccc",
-                borderRadius: 8,
-                zIndex: 100,
-                maxHeight: 200,
-                shadowColor: "#000",
-                shadowOffset: { width: 0, height: 2 },
-                shadowOpacity: 0.2,
-                shadowRadius: 4,
-                elevation: 5,
-              }}
-            >
-              <FlatList
-                data={addressSuggestions}
-                keyboardShouldPersistTaps="handled"
-                keyExtractor={(item) => item.place_id}
-                renderItem={({ item }) => (
-                  <Pressable
-                    onPress={() => handleSelectAddressAuto(item.description)}
-                  >
-                    <View style={{ padding: 10 }}>
-                      <Text>{item.description}</Text>
-                    </View>
-                  </Pressable>
-                )}
-              />
-            </View>
-          )}
-          <Text
-            style={{
-              fontFamily: FONTS.regular,
-              fontSize: 17,
-              color: APP_COLOR.BROWN,
-            }}
-          >
-            Chi phí giao hàng:{" "}
-            <Text style={styles.textInputText}>
-              {currencyFormatter(shippingFee)}
-            </Text>
-          </Text>
-        </View>
-
-        <Text
-          style={{
-            fontFamily: FONTS.bold,
-            fontSize: 20,
-            color: APP_COLOR.BROWN,
-            marginBottom: 5,
-          }}
-        >
-          Chi tiết đơn hàng
-        </Text>
-        {orderItems?.map((item, index) => {
-          return (
-            <View
-              key={`${item.productId}-${index}`}
-              style={{
-                gap: 10,
-                flexDirection: "row",
-                paddingBottom: 5,
-              }}
-            >
-              <View
-                style={{
-                  flexDirection: "row",
-                  justifyContent: "space-between",
-                  width: "100%",
-                }}
-              >
-                <Text
-                  style={{
-                    fontFamily: FONTS.regular,
-                    fontSize: 17,
-                    color: APP_COLOR.BROWN,
-                  }}
-                >
-                  {item.title} x {item.quantity}
-                </Text>
-
-                <Text
-                  style={{
-                    fontFamily: FONTS.regular,
-                    fontSize: 17,
-                    color: APP_COLOR.BROWN,
-                  }}
-                >
-                  {currencyFormatter(item.price)}
-                </Text>
-              </View>
-            </View>
-          );
-        })}
-
         <Formik
           validationSchema={ChangePasswordSchema}
           initialValues={{
             promotionCode: "",
             note: "",
             address: "",
+            addressObj: null as any,
+            customerName: "",
+            customerEmail: "",
             phoneNumber: "",
             branchId: 0,
             pointUsed: 0,
@@ -580,23 +424,43 @@ const PlaceOrderPage = () => {
               },
             ],
             pickUp: false,
-            proxyName: "",
-            proxyPhone: "",
+            pickupTime: new Date().toISOString(),
           }}
           onSubmit={(values) => {
+            const numericPointUsed = Number(values.pointUsed) || 0;
+            if (numericPointUsed < 0) {
+              Toast.show("Điểm sử dụng không thể là số âm!", {
+                duration: Toast.durations.LONG,
+                textColor: "white",
+                backgroundColor: "red",
+                opacity: 1,
+              });
+              return;
+            }
+            if (!values.addressObj || !values.addressObj.description) {
+              Toast.show("Bạn phải chọn địa chỉ từ gợi ý Google Maps!", {
+                duration: Toast.durations.LONG,
+                textColor: "white",
+                backgroundColor: "red",
+                opacity: 1,
+              });
+              return;
+            }
+            console.log("[DEBUG] values.orderItems:", values.orderItems);
             handleCreateOrder(
-              values.orderItems,
-              discountAmount,
               values.promotionCode,
-              shippingFee,
-              values.paymentMethodId,
-              selectedAddress,
               values.note,
+              values.addressObj.description,
+              values.phoneNumber,
+              values.branchId,
+              numericPointUsed,
+              values.pointEarned,
+              values.paymentMethodId,
+              values.orderItems, // truyền thẳng, đã có note
               values.pickUp,
-              values.proxyName,
-              values.proxyPhone,
-              decodeToken,
-              "app"
+              values.customerName,
+              values.pickupTime || new Date().toISOString(),
+              values.customerEmail
             );
           }}
         >
@@ -609,13 +473,34 @@ const PlaceOrderPage = () => {
             touched,
             setFieldValue,
           }) => {
+            // Đưa useEffect lấy số điện thoại từ decoded ra ngoài Formik
             useEffect(() => {
-              if (cusAddress || cusPhone) {
-                setFieldValue("address", cusAddress);
+              if (decodeToken) {
+                try {
+                  const decoded = jwtDecode(decodeToken);
+                  if (decoded && decoded.phone) {
+                    setCusPhone(decoded.phone);
+                  }
+                } catch (e) {}
+              }
+            }, [decodeToken]);
+            // Trong render props của Formik, chỉ giữ lại 1 useEffect để setFieldValue('phoneNumber', cusPhone)
+            useEffect(() => {
+              if (cusPhone) {
                 setFieldValue("phoneNumber", cusPhone);
               }
+              if (cusAddress) {
+                setFieldValue("address", cusAddress);
+              }
               if (orderDetails) {
-                setFieldValue("orderItems", orderDetails);
+                setFieldValue(
+                  "orderItems",
+                  orderDetails.map((item) => ({
+                    productId: item.productId,
+                    quantity: item.quantity,
+                    note: item.note ?? "",
+                  }))
+                );
               }
               if (branchId) {
                 setFieldValue("branchId", branchId);
@@ -628,43 +513,152 @@ const PlaceOrderPage = () => {
                 setFieldValue("pointUsed", currentPointUsed);
               }
             }, [
+              cusPhone,
               cusAddress,
               cusPhone,
               orderDetails,
+              branchId,
               restaurant,
               cart,
-              branchId,
             ]);
-            useEffect(() => {
-              const fetchPromotion = async () => {
-                if (values.promotionCode) {
-                  try {
-                    const token = await AsyncStorage.getItem("access_token");
-                    const res = await axios.get(
-                      `https://wdp301-su25.space/api/promotions/code/${values.promotionCode}`,
-                      {
-                        headers: {
-                          Authorization: `Bearer ${token}`,
-                          accept: "*/*",
-                        },
-                      }
-                    );
-                    if (res.data && res.data.discountAmount) {
-                      setDiscountAmount(res.data.discountAmount);
-                    } else {
-                      setDiscountAmount(0);
-                    }
-                  } catch (e) {
-                    setDiscountAmount(0);
-                  }
-                } else {
-                  setDiscountAmount(0);
-                }
-              };
-              fetchPromotion();
-            }, [values.promotionCode]);
             return (
               <View style={styles.container}>
+                <View
+                  style={{
+                    position: "relative",
+                    minWidth: 200,
+                    flex: 1,
+                    marginBottom: 10,
+                  }}
+                >
+                  <TextInput
+                    placeholder="Nhập địa chỉ của bạn"
+                    value={values.address}
+                    onFocus={() => setShowSuggestions(true)}
+                    onChangeText={(text) => {
+                      setSearchTerm(text);
+                      setFieldValue("address", text);
+                      setFieldValue("addressObj", null); // reset object khi user tự nhập
+                      handleSearch(text);
+                      setShowSuggestions(true);
+                    }}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: APP_COLOR.BROWN,
+                      borderRadius: 10,
+                      paddingVertical: 10,
+                      color: APP_COLOR.BROWN,
+                      backgroundColor: APP_COLOR.BACKGROUND_ORANGE,
+                      marginVertical: 10,
+                      minWidth: 200,
+                    }}
+                    placeholderTextColor={APP_COLOR.BROWN}
+                  />
+                  {showSuggestions && addressSuggestions.length > 0 && (
+                    <View
+                      style={{
+                        position: "absolute",
+                        top: 50,
+                        left: 0,
+                        right: 0,
+                        backgroundColor: APP_COLOR.WHITE,
+                        borderWidth: 1,
+                        borderColor: "#ccc",
+                        borderRadius: 8,
+                        zIndex: 100,
+                        maxHeight: 200,
+                        shadowColor: "#000",
+                        shadowOffset: { width: 0, height: 2 },
+                        shadowOpacity: 0.2,
+                        shadowRadius: 4,
+                        elevation: 5,
+                      }}
+                    >
+                      <FlatList
+                        data={addressSuggestions}
+                        keyboardShouldPersistTaps="handled"
+                        keyExtractor={(item) => item.place_id}
+                        renderItem={({ item }) => (
+                          <Pressable
+                            onPress={() => {
+                              setSearchTerm(item.description);
+                              setSelectedAddress(item.description);
+                              setFieldValue("address", item.description);
+                              setFieldValue("addressObj", item);
+                              setAddressSuggestions([]);
+                              setShowSuggestions(false);
+                              Toast.show(
+                                `Đã chọn địa chỉ: ${item.description}`,
+                                {
+                                  duration: Toast.durations.LONG,
+                                  textColor: "white",
+                                  backgroundColor: APP_COLOR.ORANGE,
+                                  opacity: 1,
+                                }
+                              );
+                            }}
+                          >
+                            <View style={{ padding: 10 }}>
+                              <Text>{item.description}</Text>
+                            </View>
+                          </Pressable>
+                        )}
+                      />
+                    </View>
+                  )}
+                </View>
+
+                <Text
+                  style={{
+                    fontFamily: FONTS.bold,
+                    fontSize: 20,
+                    color: APP_COLOR.BROWN,
+                    marginBottom: 5,
+                  }}
+                >
+                  Chi tiết đơn hàng
+                </Text>
+                {orderItems?.map((item, index) => {
+                  return (
+                    <View
+                      key={`${item.productId}-${index}`}
+                      style={{
+                        gap: 10,
+                        flexDirection: "row",
+                        paddingBottom: 5,
+                      }}
+                    >
+                      <View
+                        style={{
+                          flexDirection: "row",
+                          justifyContent: "space-between",
+                          width: "100%",
+                        }}
+                      >
+                        <Text
+                          style={{
+                            fontFamily: FONTS.regular,
+                            fontSize: 17,
+                            color: APP_COLOR.BROWN,
+                          }}
+                        >
+                          {item.title} x {item.quantity}
+                        </Text>
+
+                        <Text
+                          style={{
+                            fontFamily: FONTS.regular,
+                            fontSize: 17,
+                            color: APP_COLOR.BROWN,
+                          }}
+                        >
+                          {currencyFormatter(item.price)}
+                        </Text>
+                      </View>
+                    </View>
+                  );
+                })}
+
                 {orderItems?.length > 0 && (
                   <View
                     style={{
@@ -729,9 +723,7 @@ const PlaceOrderPage = () => {
                           color: APP_COLOR.BROWN,
                         }}
                       >
-                        {currencyFormatter(
-                          calculateTotalPrice(cart, restaurant?._id) || 0
-                        )}
+                        {currencyFormatter(calculateTotalPrice() || 0)}
                       </Text>
                     </View>
                     <View style={styles.textInputView}>
@@ -750,7 +742,7 @@ const PlaceOrderPage = () => {
                           color: APP_COLOR.BROWN,
                         }}
                       >
-                        {currencyFormatter(shippingFee)}
+                        {currencyFormatter(0)}
                       </Text>
                     </View>
                     <View style={styles.textInputView}>
@@ -760,7 +752,7 @@ const PlaceOrderPage = () => {
                           { fontFamily: FONTS.regular, fontSize: 17 },
                         ]}
                       >
-                        Mã Giảm giá
+                        Giảm giá
                       </Text>
                       <Text
                         style={{
@@ -769,7 +761,7 @@ const PlaceOrderPage = () => {
                           color: APP_COLOR.BROWN,
                         }}
                       >
-                        {currencyFormatter(discountAmount)}
+                        {currencyFormatter(0)}
                       </Text>
                     </View>
                     <View style={styles.textInputView}>
@@ -788,11 +780,7 @@ const PlaceOrderPage = () => {
                           color: APP_COLOR.BROWN,
                         }}
                       >
-                        {currencyFormatter(
-                          calculateTotalPrice(cart, restaurant?._id) +
-                            shippingFee -
-                            discountAmount || 0
-                        )}
+                        {currencyFormatter(calculateTotalPrice() || 0)}
                       </Text>
                     </View>
                   </View>
@@ -807,6 +795,20 @@ const PlaceOrderPage = () => {
                     placeholder="Nhập mã khuyến mãi"
                   />
                 )}
+                {/* <CustomerInforInput
+                  title="Sử dụng điểm"
+                  onChangeText={(text: any) => {
+                    const numericValue = Number(text) || 0;
+                    if (numericValue >= 0) {
+                      setFieldValue("pointUsed", numericValue);
+                    }
+                  }}
+                  onBlur={handleBlur("pointUsed")}
+                  value={String(values.pointUsed)}
+                  error={errors.pointUsed}
+                  touched={touched.pointUsed}
+                  keyboardType="numeric"
+                /> */}
                 <View style={styles.dropdownContainer}>
                   <Text style={styles.dropdownLabel}>
                     Phương thức thanh toán
@@ -843,34 +845,11 @@ const PlaceOrderPage = () => {
                   )}
                 </View>
                 <CustomerInforInput
-                  title="Đặt hàng hộ"
+                  title="Mang đi"
                   value={values.pickUp}
                   setValue={(v) => setFieldValue("pickUp", v)}
                   isBoolean={true}
                 />
-                {values.pickUp && (
-                  <View style={{ marginBottom: 10 }}>
-                    <CustomerInforInput
-                      title="Tên người nhận hộ"
-                      onChangeText={handleChange("proxyName")}
-                      onBlur={handleBlur("proxyName ")}
-                      value={values.proxyName}
-                      error={errors.proxyName}
-                      touched={touched.proxyName}
-                      placeholder="Nhập tên người nhận hộ"
-                    />
-                    <CustomerInforInput
-                      title="Số điện thoại người nhận hộ"
-                      onChangeText={handleChange("proxyPhone")}
-                      onBlur={handleBlur("proxyPhone")}
-                      value={values.proxyPhone}
-                      error={errors.proxyPhone}
-                      touched={touched.proxyPhone}
-                      placeholder="Nhập số điện thoại người nhận hộ"
-                      keyboardType="phone-pad"
-                    />
-                  </View>
-                )}
                 <CustomerInforInput
                   onChangeText={handleChange("note")}
                   onBlur={handleBlur("note")}
@@ -879,23 +858,113 @@ const PlaceOrderPage = () => {
                   touched={touched.note}
                   placeholder="Ghi chú"
                 />
+                <View style={{ marginBottom: 10 }}>
+                  <Text
+                    style={{
+                      fontFamily: FONTS.regular,
+                      fontSize: 16,
+                      color: APP_COLOR.BROWN,
+                    }}
+                  >
+                    Tên khách hàng
+                  </Text>
+                  <TextInput
+                    placeholder="Nhập tên khách hàng"
+                    value={values.customerName}
+                    onChangeText={(text) => setFieldValue("customerName", text)}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: APP_COLOR.BROWN,
+                      borderRadius: 10,
+                      paddingVertical: 8,
+                      color: APP_COLOR.BROWN,
+                      backgroundColor: APP_COLOR.BACKGROUND_ORANGE,
+                      marginVertical: 5,
+                      minWidth: 200,
+                      paddingHorizontal: 10,
+                    }}
+                    placeholderTextColor={APP_COLOR.BROWN}
+                  />
+                </View>
+                <View style={{ marginBottom: 10 }}>
+                  <Text
+                    style={{
+                      fontFamily: FONTS.regular,
+                      fontSize: 16,
+                      color: APP_COLOR.BROWN,
+                    }}
+                  >
+                    Email khách hàng
+                  </Text>
+                  <TextInput
+                    placeholder="Nhập email khách hàng"
+                    value={values.customerEmail}
+                    onChangeText={(text) =>
+                      setFieldValue("customerEmail", text)
+                    }
+                    style={{
+                      borderWidth: 1,
+                      borderColor: APP_COLOR.BROWN,
+                      borderRadius: 10,
+                      paddingVertical: 8,
+                      color: APP_COLOR.BROWN,
+                      backgroundColor: APP_COLOR.BACKGROUND_ORANGE,
+                      marginVertical: 5,
+                      minWidth: 200,
+                      paddingHorizontal: 10,
+                    }}
+                    placeholderTextColor={APP_COLOR.BROWN}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+                <View style={{ marginBottom: 10 }}>
+                  <Text
+                    style={{
+                      fontFamily: FONTS.regular,
+                      fontSize: 16,
+                      color: APP_COLOR.BROWN,
+                    }}
+                  >
+                    Số điện thoại
+                  </Text>
+                  <TextInput
+                    value={values.phoneNumber}
+                    onChangeText={(text) => setFieldValue("phoneNumber", text)}
+                    editable={true}
+                    style={{
+                      borderWidth: 1,
+                      borderColor: APP_COLOR.BROWN,
+                      borderRadius: 10,
+                      paddingVertical: 8,
+                      color: APP_COLOR.BROWN,
+                      backgroundColor: APP_COLOR.BACKGROUND_ORANGE,
+                      marginVertical: 5,
+                      minWidth: 200,
+                      paddingHorizontal: 10,
+                    }}
+                    placeholderTextColor={APP_COLOR.BROWN}
+                    keyboardType="phone-pad"
+                  />
+                </View>
                 <ShareButton
                   loading={loading}
                   title="Tạo đơn hàng"
                   onPress={() => {
                     handleCreateOrder(
-                      values.orderItems,
-                      discountAmount,
                       values.promotionCode,
-                      shippingFee,
-                      values.paymentMethodId,
-                      selectedAddress,
                       values.note,
+                      values.address,
+                      values.phoneNumber,
+                      values.branchId,
+                      values.pointUsed,
+                      values.pointEarned,
+                      values.paymentMethodId,
+                      values.orderItems,
                       values.pickUp,
-                      values.proxyName,
-                      values.proxyPhone,
-                      decodeToken,
-                      "app"
+                      values.customerName,
+                      values.pickupTime || new Date().toISOString(),
+                      values.customerEmail
                     );
                   }}
                   textStyle={{
@@ -919,39 +988,6 @@ const PlaceOrderPage = () => {
           }}
         </Formik>
       </ScrollView>
-      <Modal
-        visible={modalVisible}
-        animationType="fade"
-        transparent={true}
-        onRequestClose={() => setModalVisible(false)}
-      >
-        <View style={styles.modalContainer}>
-          <View style={styles.modalContent}>
-            <Text
-              style={{
-                fontFamily: FONTS.regular,
-                fontSize: 20,
-                marginBottom: 10,
-              }}
-            >
-              Địa chỉ giao hàng
-            </Text>
-            <ScrollView>
-              {addresses.map((address: string, index: number) => (
-                <Pressable
-                  key={`${address}-${index}`}
-                  onPress={() => handleSelectAddress(address)}
-                  style={styles.addressItem}
-                >
-                  <View>
-                    <Text style={styles.textNameInfor}>{address}</Text>
-                  </View>
-                </Pressable>
-              ))}
-            </ScrollView>
-          </View>
-        </View>
-      </Modal>
     </SafeAreaView>
   );
 };

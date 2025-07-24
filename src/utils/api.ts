@@ -186,3 +186,17 @@ export const getProductsByKeywordAPI = (
   )}`;
   return axios.get(url);
 };
+
+export const getOrderHistoryByCustomerAPI = (
+  customerId: number,
+  token: string,
+  page = 0,
+  size = 10
+) => {
+  const url = `${API_URL}/orders/customer/${customerId}?page=${page}&size=${size}`;
+  return axios.get(url, {
+    headers: {
+      Authorization: `Bearer ${token}`,
+    },
+  });
+};
